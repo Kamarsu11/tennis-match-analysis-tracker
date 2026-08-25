@@ -142,7 +142,7 @@ export class PointTrackerComponent {
                 Set ${sb.currentSet} ${sb.isTiebreak ? '• <strong class="text-indigo-400">TIE-BREAK</strong>' : `• Game ${curGame.gameIndexInSet + 1}`}
               </div>
               <div class="font-mono text-slate-400">
-                Pt #${sb.totalPoints + 1}
+                Pt #${sb.trackedPoints + 1}
               </div>
             </div>
           </div>
@@ -150,7 +150,7 @@ export class PointTrackerComponent {
           <!-- RECENT POINTS TICKER (Quick Click to Edit Any Point) -->
           <div class="mt-1.5 flex items-center gap-1 overflow-x-auto text-[11px] no-scrollbar py-0.5">
             <button id="btn-view-all-points" class="text-slate-400 text-[10px] shrink-0 hover:text-white underline">
-              All (${this.engine.points.length}):
+              All (${sb.trackedPoints}):
             </button>
             ${this.getRecentPointsHtml()}
           </div>
@@ -180,13 +180,22 @@ export class PointTrackerComponent {
 
     const recent = this.engine.points.slice(-5).reverse();
     return recent.map(pt => {
+      if (pt.type === 'score_jump' || pt.isUntracked) {
+        return `
+          <button data-jump-id="${pt.id}" class="btn-jump-pill px-2 py-0.5 rounded bg-indigo-950/90 border border-indigo-700 text-indigo-200 shrink-0 flex items-center gap-1 active:scale-95 text-[10px] font-semibold" title="${pt.summary || 'Score Jump'}">
+            <span>⏩ Jump (${pt.summary || 'Score Sync'})</span>
+          </button>
+        `;
+      }
+
       const winnerName = pt.winnerPlayer === 'P1' ? this.engine.config.p1Name : this.engine.config.p2Name;
       let label = `${winnerName} ${this.formatOutcomeShort(pt.outcome)}`;
       if (pt.shotType) label += ` (${pt.shotType.slice(0, 2).toUpperCase()})`;
+      const ptNum = pt.trackedIndex || (pt.index + 1);
 
       return `
-        <button data-edit-point-id="${pt.id}" class="btn-edit-recent px-2 py-0.5 rounded bg-slate-800/90 border border-slate-700/80 text-slate-300 hover:text-white shrink-0 active:scale-95 flex items-center gap-1" title="Click to edit point #${pt.index + 1}">
-          <span>#${pt.index + 1} ${label}</span>
+        <button data-edit-point-id="${pt.id}" class="btn-edit-recent px-2 py-0.5 rounded bg-slate-800/90 border border-slate-700/80 text-slate-300 hover:text-white shrink-0 active:scale-95 flex items-center gap-1" title="Click to edit point #${ptNum}">
+          <span>#${ptNum} ${label}</span>
           ${pt.comment ? '<span class="text-amber-400">💬</span>' : ''}
           <span class="text-[9px] text-slate-400">✏️</span>
         </button>
@@ -488,12 +497,13 @@ export class PointTrackerComponent {
       const calculatedWinner = (outcome === 'winner' || outcome === 'ace' || outcome === 'service_winner') ? eventPlayer : (eventPlayer === 'P1' ? 'P2' : 'P1');
       const calculatedWinnerName = calculatedWinner === 'P1' ? p1 : p2;
       const eventPlayerName = eventPlayer === 'P1' ? p1 : p2;
+      const ptNum = pt.trackedIndex || (this.editingPointIndex + 1);
 
       return `
         <div class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-4 max-h-[90vh] overflow-y-auto">
             <div class="flex items-center justify-between mb-3 border-b border-slate-800 pb-2">
-              <h3 class="text-base font-bold text-white">Edit Point #${this.editingPointIndex + 1}</h3>
+              <h3 class="text-base font-bold text-white">Edit Point #${ptNum}</h3>
               <button id="btn-close-modal" class="text-slate-400 hover:text-white text-lg font-bold">✕</button>
             </div>
 
@@ -599,30 +609,49 @@ export class PointTrackerComponent {
     if (this.activeModal === 'all_points') {
       const points = this.engine.points;
       const config = this.engine.config;
+      const trackedCount = points.filter(p => !p.isUntracked && p.type !== 'score_jump').length;
 
       return `
         <div class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-4 max-h-[85vh] flex flex-col">
             <div class="flex items-center justify-between mb-3 border-b border-slate-800 pb-2">
-              <h3 class="text-base font-bold text-white">All Logged Points (${points.length})</h3>
+              <h3 class="text-base font-bold text-white">All Logged Points (${trackedCount} tracked)</h3>
               <button id="btn-close-modal" class="text-slate-400 hover:text-white text-lg font-bold">✕</button>
             </div>
 
             <div class="flex-1 overflow-y-auto space-y-2 pr-1 text-xs">
-              ${points.length === 0 ? '<div class="text-slate-400 italic text-center py-4">No points logged yet.</div>' : points.slice().reverse().map(pt => `
-                <div data-edit-point-id="${pt.id}" class="btn-edit-recent p-2 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 cursor-pointer flex items-center justify-between">
-                  <div>
-                    <div class="font-bold text-white flex items-center gap-1.5">
-                      <span class="text-slate-400">#${pt.index + 1}</span>
-                      <span class="${pt.winnerPlayer === 'P1' ? 'text-emerald-400' : 'text-indigo-400'}">${pt.winnerPlayer === 'P1' ? config.p1Name : config.p2Name}</span>
-                      <span>${this.formatOutcomeShort(pt.outcome)}</span>
-                      ${pt.shotType ? `<span class="text-[10px] text-slate-400">(${pt.shotType})</span>` : ''}
+              ${points.length === 0 ? '<div class="text-slate-400 italic text-center py-4">No points logged yet.</div>' : points.slice().reverse().map(pt => {
+                if (pt.type === 'score_jump' || pt.isUntracked) {
+                  return `
+                    <div class="p-2.5 rounded-xl bg-indigo-950/60 border border-indigo-700/60 flex items-center justify-between gap-2">
+                      <div>
+                        <div class="font-bold text-indigo-200 flex items-center gap-1.5">
+                          <span>⏩ Score Jump</span>
+                          <span class="text-slate-200 font-semibold">${pt.summary || 'Score adjusted'}</span>
+                        </div>
+                        <div class="text-[10px] text-indigo-300/80">Untracked games skipped / score synchronized</div>
+                      </div>
+                      <button data-delete-jump-id="${pt.id}" class="btn-delete-jump text-xs text-rose-400 hover:text-rose-300 px-2 py-1 bg-rose-950/50 rounded-lg border border-rose-800 shrink-0 active:scale-95">✕ Remove</button>
                     </div>
-                    ${pt.comment ? `<div class="text-[10px] text-amber-300 italic">"${pt.comment}"</div>` : ''}
+                  `;
+                }
+
+                const ptNum = pt.trackedIndex || (pt.index + 1);
+                return `
+                  <div data-edit-point-id="${pt.id}" class="btn-edit-recent p-2 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 cursor-pointer flex items-center justify-between">
+                    <div>
+                      <div class="font-bold text-white flex items-center gap-1.5">
+                        <span class="text-slate-400">#${ptNum}</span>
+                        <span class="${pt.winnerPlayer === 'P1' ? 'text-emerald-400' : 'text-indigo-400'}">${pt.winnerPlayer === 'P1' ? config.p1Name : config.p2Name}</span>
+                        <span>${this.formatOutcomeShort(pt.outcome)}</span>
+                        ${pt.shotType ? `<span class="text-[10px] text-slate-400">(${pt.shotType})</span>` : ''}
+                      </div>
+                      ${pt.comment ? `<div class="text-[10px] text-amber-300 italic">"${pt.comment}"</div>` : ''}
+                    </div>
+                    <div class="text-slate-400 text-xs">✏️ Edit</div>
                   </div>
-                  <div class="text-slate-400 text-xs">✏️ Edit</div>
-                </div>
-              `).join('')}
+                `;
+              }).join('')}
             </div>
 
             <div class="mt-3 pt-2 border-t border-slate-800 flex justify-end">
@@ -980,6 +1009,31 @@ export class PointTrackerComponent {
           this.editingPointIndex = idx;
           this.activeModal = 'edit_point';
           this.render();
+        }
+      };
+    });
+
+    // Jump pills click in recent ticker
+    this.container.querySelectorAll('.btn-jump-pill').forEach(btn => {
+      btn.onclick = () => {
+        this.activeModal = 'all_points';
+        this.render();
+      };
+    });
+
+    // Delete Jump Score
+    this.container.querySelectorAll('.btn-delete-jump').forEach(btn => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        const jumpId = btn.getAttribute('data-delete-jump-id');
+        if (confirm('Remove this score jump? The match score will recalculate from the remaining logged points.')) {
+          const idx = this.engine.points.findIndex(p => p.id === jumpId);
+          if (idx !== -1) {
+            this.engine.points.splice(idx, 1);
+            this.engine.recalculateStateFromPoints();
+            this.onStateChange();
+            this.render();
+          }
         }
       };
     });

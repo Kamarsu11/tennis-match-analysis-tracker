@@ -173,24 +173,60 @@ console.log('🧪 Starting TennisEngine & Stats Automated Test Suite...');
   console.log('✅ Test 5 Passed: Statistical & Diagnostic Engine');
 }
 
-// Test 6: Set Exact Score (Mid-Match Jump)
+// Test 6: Set Exact Score (Mid-Match Jump) & Preservation of Prior Tracked Points
 {
   const engine = new TennisEngine(FORMAT_PRESETS.STANDARD_BEST_OF_3);
+
+  // User tracks 3 points at the beginning of the match
+  engine.addPoint({ winnerPlayer: 'P1', outcome: 'ace' });
+  engine.addPoint({ winnerPlayer: 'P2', outcome: 'winner', shotType: 'forehand' });
+  engine.addPoint({ winnerPlayer: 'P1', outcome: 'unforced_error', shotType: 'backhand' });
+
+  assert(engine.points.length === 3, 'Initial points count is 3');
+
+  // User misses games and jumps score to 6-2, 3-1 (15-30)
   engine.setExactScore({
     sets: [
-      { p1: 6, p2: 4 }, // Set 1 complete (6-4)
-      { p1: 3, p2: 2 }  // Set 2 in progress (3-2)
+      { p1: 6, p2: 2 }, // Set 1 complete (6-2)
+      { p1: 3, p2: 1 }  // Set 2 in progress (3-1)
     ],
-    p1GamePoints: 2, // 30
-    p2GamePoints: 1  // 15
+    p1GamePoints: 1, // 15
+    p2GamePoints: 2  // 30
   });
 
   const sb = engine.getScoreboard();
   assert(sb.currentSet === 2, 'Should be in Set 2');
-  assert(sb.sets[0].p1 === 6 && sb.sets[0].p2 === 4, 'Set 1 is 6-4');
-  assert(sb.sets[1].p1 === 3 && sb.sets[1].p2 === 2, 'Set 2 is 3-2');
-  assert(sb.p1Point === '30' && sb.p2Point === '15', 'Game score is 30-15');
-  console.log('✅ Test 6 Passed: Set Exact Score (Mid-Match Jump)');
+  assert(sb.sets[0].p1 === 6 && sb.sets[0].p2 === 2, 'Set 1 is 6-2');
+  assert(sb.sets[1].p1 === 3 && sb.sets[1].p2 === 1, 'Set 2 is 3-1');
+  assert(sb.p1Point === '15' && sb.p2Point === '30', 'Game score is 15-30');
+  
+  // Tracked points should still be 3 (not 51 dummy points!)
+  assert(sb.trackedPoints === 3, 'Tracked points count must remain 3');
+
+  // Statistics must ONLY reflect the 3 real points
+  const stats = TennisStats.calculate(engine.points, engine.config);
+  assert(stats.totalPoints === 3, 'Total points in stats must be 3');
+  assert(stats.P1.aces === 1, 'P1 should have 1 Ace');
+  assert(stats.P2.winnersTotal === 1, 'P2 should have 1 FH winner');
+
+  // User adds Point #4 after the jump
+  engine.addPoint({ winnerPlayer: 'P1', outcome: 'winner', shotType: 'forehand' });
+  const sbAfter = engine.getScoreboard();
+  assert(sbAfter.trackedPoints === 4, 'Tracked points count is now 4');
+  assert(sbAfter.p1Point === '30' && sbAfter.p2Point === '30', 'Game score advances from 15-30 to 30-30');
+
+  // Undo Point #4 returns to 15-30
+  engine.undoLastPoint();
+  assert(engine.getScoreboard().trackedPoints === 3, 'Tracked points back to 3');
+  assert(engine.getScoreboard().p1Point === '15' && engine.getScoreboard().p2Point === '30', 'Game score returns to 15-30');
+
+  // Undo the Score Jump returns to state right after first 3 points
+  engine.undoLastPoint();
+  assert(engine.getScoreboard().trackedPoints === 3, 'Tracked points still 3');
+  assert(engine.getScoreboard().currentSet === 1, 'Back in Set 1');
+  assert(engine.getScoreboard().sets[0].p1 === 0 && engine.getScoreboard().sets[0].p2 === 0, 'Set 1 is 0-0');
+
+  console.log('✅ Test 6 Passed: Set Exact Score (Mid-Match Jump & Tracked Point Preservation)');
 }
 
 console.log('🎉 ALL ENGINE & STATS TESTS PASSED PERFECTLY!');

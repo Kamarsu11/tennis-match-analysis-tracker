@@ -177,6 +177,32 @@ export class TennisStorage {
     ];
 
     const rows = (match.points || []).map((pt, idx) => {
+      if (pt.type === 'score_jump' || pt.isUntracked) {
+        return [
+          idx + 1,
+          (pt.setIndex || 0) + 1,
+          (pt.gameIndex || 0) + 1,
+          '""',
+          '""',
+          '""',
+          '""',
+          '',
+          'NO',
+          'NO',
+          'NO',
+          'NO',
+          '""',
+          'SCORE_JUMP',
+          '',
+          '',
+          '',
+          '',
+          '""',
+          `"${(pt.summary || pt.comment || 'Score Jump').replace(/"/g, '""')}"`,
+          new Date(pt.timestamp || Date.now()).toISOString(),
+        ].join(',');
+      }
+
       const winnerName = pt.winnerPlayer === 'P1' ? match.config.p1Name : match.config.p2Name;
       const serverName = pt.server === 'P1' ? match.config.p1Name : match.config.p2Name;
       const receiverName = pt.receiver === 'P1' ? match.config.p1Name : match.config.p2Name;

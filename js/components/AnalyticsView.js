@@ -345,6 +345,8 @@ export class AnalyticsViewComponent {
     const filterText = (f.searchComment || '').toLowerCase().trim();
 
     return points.filter(pt => {
+      if (pt.type === 'score_jump' || pt.isUntracked) return false;
+
       // 1. Level Filter (Set / Game / TB)
       if (f.level === 'set' && pt.setIndex !== f.setIndex) return false;
       if (f.level === 'game' && (pt.setIndex !== f.setIndex || pt.gameIndex !== f.gameIndex)) return false;
@@ -385,8 +387,9 @@ export class AnalyticsViewComponent {
   }
 
   updateLogCounter() {
-    const total = this.engine.points.length;
-    const filtered = this.getFilteredPoints(this.engine.points).length;
+    const trackedPoints = this.engine.points.filter(p => !p.isUntracked && p.type !== 'score_jump');
+    const total = trackedPoints.length;
+    const filtered = this.getFilteredPoints(trackedPoints).length;
     const counterEl = this.container.querySelector('#log-match-counter');
     if (counterEl) {
       if (total === 0) {
@@ -399,11 +402,12 @@ export class AnalyticsViewComponent {
   }
 
   renderPointLogHtml(points, config) {
-    if (points.length === 0) {
+    const trackedPoints = points.filter(p => !p.isUntracked && p.type !== 'score_jump');
+    if (trackedPoints.length === 0) {
       return '<div class="text-xs text-slate-400 italic text-center py-4">No points logged yet.</div>';
     }
 
-    const filtered = this.getFilteredPoints(points);
+    const filtered = this.getFilteredPoints(trackedPoints);
     if (filtered.length === 0) {
       return '<div class="text-xs text-amber-400 italic text-center py-4">No points match the selected filter combination.</div>';
     }
@@ -411,12 +415,13 @@ export class AnalyticsViewComponent {
     return filtered.slice().reverse().map(pt => {
       const winnerName = pt.winnerPlayer === 'P1' ? config.p1Name : config.p2Name;
       const isP1 = pt.winnerPlayer === 'P1';
+      const ptNum = pt.trackedIndex || (pt.index + 1);
 
       return `
         <div class="p-2 rounded-xl bg-slate-950 border border-slate-800/80 text-xs space-y-1">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-1.5 font-bold">
-              <span class="text-[10px] font-mono text-slate-400">Pt #${pt.index + 1}</span>
+              <span class="text-[10px] font-mono text-slate-400">Pt #${ptNum}</span>
               <span class="${isP1 ? 'text-emerald-400' : 'text-indigo-400'}">${winnerName}</span>
               <span class="text-slate-300">${this.formatOutcomeFull(pt.outcome)}</span>
             </div>

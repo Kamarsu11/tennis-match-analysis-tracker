@@ -11,7 +11,7 @@ export class TennisStats {
    * @param {Object} filter - Optional { setIndex?: number, gameIndex?: number, isTiebreak?: boolean }
    */
   static calculate(points, config, filter = {}) {
-    let filteredPoints = points;
+    let filteredPoints = (points || []).filter(p => !p.isUntracked && p.type !== 'score_jump');
 
     if (filter.setIndex !== undefined) {
       filteredPoints = filteredPoints.filter(p => p.setIndex === filter.setIndex);

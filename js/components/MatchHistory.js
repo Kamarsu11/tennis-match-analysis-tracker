@@ -50,7 +50,7 @@ export class MatchHistoryComponent {
 
   renderMatchCard(match) {
     const config = match.config || {};
-    const ptsCount = (match.points || []).length;
+    const ptsCount = (match.points || []).filter(p => !p.isUntracked && p.type !== 'score_jump').length;
     const isComplete = match.state?.matchComplete || false;
     const dateStr = new Date(match.updatedAt || Date.now()).toLocaleDateString(undefined, {
       month: 'short',

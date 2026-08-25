@@ -241,31 +241,199 @@ export class TennisEngine {
   recalculateStateFromPoints() {
     this.state = this.getInitialState();
 
+    let trackedCount = 0;
     for (let i = 0; i < this.points.length; i++) {
       const pt = this.points[i];
-      // update point index metadata if needed
+      // update point index metadata
       pt.index = i;
-      pt.setIndex = this.state.currentSetIndex;
-      pt.gameIndex = this.state.currentGame.gameIndexInSet;
-      pt.server = this.state.currentGame.server;
-      pt.receiver = this.state.currentGame.receiver;
-      pt.servingSide = this.state.currentGame.servingSide;
-      pt.isTiebreak = this.state.currentGame.isTiebreak;
-      
-      pt.scoreBefore = {
-        p1Display: this.getPointDisplay('P1'),
-        p2Display: this.getPointDisplay('P2'),
-        p1Games: this.state.setScores[this.state.currentSetIndex].p1Games,
-        p2Games: this.state.setScores[this.state.currentSetIndex].p2Games,
-        setsP1: this.state.setsWon.P1,
-        setsP2: this.state.setsWon.P2,
-      };
 
-      this.applyPointTransition(pt);
+      if (pt.type === 'score_jump') {
+        this.applyScoreJumpTransition(pt);
+      } else {
+        trackedCount++;
+        pt.trackedIndex = trackedCount;
+        pt.setIndex = this.state.currentSetIndex;
+        pt.gameIndex = this.state.currentGame.gameIndexInSet;
+        pt.server = this.state.currentGame.server;
+        pt.receiver = this.state.currentGame.receiver;
+        pt.servingSide = this.state.currentGame.servingSide;
+        pt.isTiebreak = this.state.currentGame.isTiebreak;
+        
+        pt.scoreBefore = {
+          p1Display: this.getPointDisplay('P1'),
+          p2Display: this.getPointDisplay('P2'),
+          p1Games: this.state.setScores[this.state.currentSetIndex]?.p1Games || 0,
+          p2Games: this.state.setScores[this.state.currentSetIndex]?.p2Games || 0,
+          setsP1: this.state.setsWon.P1,
+          setsP2: this.state.setsWon.P2,
+        };
+
+        this.applyPointTransition(pt);
+      }
       
       // Compute leverage flags for the NEXT point
       this.computeLeveragePoints();
     }
+  }
+
+  /**
+   * Directly sets engine state to match a jump / mid-match exact score specification
+   */
+  applyScoreJumpTransition(jump) {
+    const rawSets = (jump.sets && jump.sets.length > 0) ? jump.sets : [{ p1: this.config.startGamesP1 || 0, p2: this.config.startGamesP2 || 0 }];
+    const gamesReq = this.config.gamesPerSet;
+    const tbAt = this.config.tiebreakAt;
+    const bestOf = this.config.bestOf;
+    const setsToWin = Math.ceil(bestOf / 2);
+
+    this.state.setScores = [];
+    this.state.setsWon = { P1: 0, P2: 0 };
+    this.state.matchComplete = false;
+    this.state.matchWinner = null;
+    this.state.totalGamesPlayed = 0;
+
+    rawSets.forEach((setScore, sIdx) => {
+      const p1G = Math.max(0, parseInt(setScore.p1 || 0, 10));
+      const p2G = Math.max(0, parseInt(setScore.p2 || 0, 10));
+      this.state.totalGamesPlayed += (p1G + p2G);
+
+      const isDecidingTB = this.isFinalSetMatchTiebreak(sIdx);
+      let isComplete = false;
+      let winner = null;
+
+      if (sIdx < rawSets.length - 1) {
+        // Earlier sets are treated as complete
+        isComplete = true;
+        winner = p1G > p2G ? 'P1' : (p2G > p1G ? 'P2' : null);
+        if (winner) this.state.setsWon[winner]++;
+      } else {
+        // Last set: check if win condition met
+        if (isDecidingTB) {
+          if (p1G >= 1 && p1G > p2G) {
+            isComplete = true;
+            winner = 'P1';
+            this.state.setsWon.P1++;
+          } else if (p2G >= 1 && p2G > p1G) {
+            isComplete = true;
+            winner = 'P2';
+            this.state.setsWon.P2++;
+          }
+        } else {
+          if (p1G >= gamesReq && (p1G - p2G >= 2 || (p1G === gamesReq && p2G < tbAt) || (p1G === tbAt + 1 && p2G === tbAt))) {
+            isComplete = true;
+            winner = 'P1';
+            this.state.setsWon.P1++;
+          } else if (p2G >= gamesReq && (p2G - p1G >= 2 || (p2G === gamesReq && p1G < tbAt) || (p2G === tbAt + 1 && p1G === tbAt))) {
+            isComplete = true;
+            winner = 'P2';
+            this.state.setsWon.P2++;
+          }
+        }
+      }
+
+      this.state.setScores.push({
+        p1Games: p1G,
+        p2Games: p2G,
+        isComplete: isComplete,
+        winner: winner,
+        tiebreak: null,
+      });
+    });
+
+    if (this.state.setsWon.P1 >= setsToWin) {
+      this.state.matchComplete = true;
+      this.state.matchWinner = 'P1';
+      this.state.currentSetIndex = this.state.setScores.length - 1;
+    } else if (this.state.setsWon.P2 >= setsToWin) {
+      this.state.matchComplete = true;
+      this.state.matchWinner = 'P2';
+      this.state.currentSetIndex = this.state.setScores.length - 1;
+    } else {
+      const lastSet = this.state.setScores[this.state.setScores.length - 1];
+      if (lastSet.isComplete) {
+        const nextSetIndex = this.state.setScores.length;
+        const isFinalMatchTb = this.isFinalSetMatchTiebreak(nextSetIndex);
+        this.state.setScores.push({
+          p1Games: isFinalMatchTb ? 0 : (this.config.startGamesP1 || 0),
+          p2Games: isFinalMatchTb ? 0 : (this.config.startGamesP2 || 0),
+          isComplete: false,
+          winner: null,
+          tiebreak: null,
+        });
+        this.state.currentSetIndex = nextSetIndex;
+      } else {
+        this.state.currentSetIndex = this.state.setScores.length - 1;
+      }
+    }
+
+    const curSetIndex = this.state.currentSetIndex;
+    const curSet = this.state.setScores[curSetIndex];
+    const isMatchTB = this.isFinalSetMatchTiebreak(curSetIndex);
+    const isSetTB = (curSet.p1Games === tbAt && curSet.p2Games === tbAt);
+    const isTiebreak = isMatchTB || isSetTB;
+
+    let completedGamesBefore = 0;
+    for (let s = 0; s < curSetIndex; s++) {
+      completedGamesBefore += (this.state.setScores[s].p1Games + this.state.setScores[s].p2Games);
+    }
+    const gameIndexInSet = curSet.p1Games + curSet.p2Games;
+    const totalGameIdx = completedGamesBefore + gameIndexInSet;
+
+    const firstServer = this.config.firstServer || 'P1';
+    const secondServer = firstServer === 'P1' ? 'P2' : 'P1';
+
+    let currentServer = (totalGameIdx % 2 === 0) ? firstServer : secondServer;
+    let currentReceiver = currentServer === 'P1' ? 'P2' : 'P1';
+
+    const p1Pts = Math.max(0, parseInt(jump.p1GamePoints || 0, 10));
+    const p2Pts = Math.max(0, parseInt(jump.p2GamePoints || 0, 10));
+
+    if (isTiebreak) {
+      const totalTbPts = p1Pts + p2Pts;
+      if (totalTbPts >= 1) {
+        const block = Math.floor((totalTbPts - 1) / 2);
+        currentServer = (block % 2 === 0) ? secondServer : firstServer;
+        currentReceiver = currentServer === 'P1' ? 'P2' : 'P1';
+      }
+    }
+
+    let servingSide = ((p1Pts + p2Pts) % 2 === 0) ? 'deuce' : 'ad';
+    if (this.config.advantageScoring && p1Pts >= 3 && p2Pts >= 3) {
+      if (p1Pts === p2Pts) {
+        servingSide = 'deuce';
+      } else {
+        servingSide = 'ad';
+      }
+    }
+
+    this.state.currentGame = {
+      gameIndexInSet: gameIndexInSet,
+      server: currentServer,
+      receiver: currentReceiver,
+      p1PointsRaw: p1Pts,
+      p2PointsRaw: p2Pts,
+      isTiebreak: isTiebreak,
+      tiebreakTarget: isTiebreak && isMatchTB ? this.config.finalSetTiebreakTarget : this.config.tiebreakTarget,
+      servingSide: servingSide,
+      isBreakPoint: false,
+      isGamePoint: false,
+      isSetPoint: false,
+      isMatchPoint: false,
+    };
+
+    if (isTiebreak) {
+      const changeInterval = (this.config.id === 'FAST_4' || this.config.gamesPerSet === 4) ? 4 : 6;
+      this.state.shouldChangeEnds = ((p1Pts + p2Pts) > 0 && (p1Pts + p2Pts) % changeInterval === 0);
+    } else {
+      this.state.shouldChangeEnds = (gameIndexInSet % 2 === 1 && (p1Pts + p2Pts === 0));
+    }
+
+    const setSummaries = this.state.setScores.map(s => `${s.p1Games}-${s.p2Games}`);
+    let ptSummary = '';
+    if (p1Pts > 0 || p2Pts > 0) {
+      ptSummary = ` (${this.getPointDisplay('P1')}-${this.getPointDisplay('P2')})`;
+    }
+    jump.summary = `${setSummaries.join(', ')}${ptSummary}`;
   }
 
   /**
@@ -608,6 +776,8 @@ export class TennisEngine {
    * Current scoreboard snapshot for UI
    */
   getScoreboard() {
+    const trackedPoints = this.points.filter(p => !p.isUntracked && p.type !== 'score_jump');
+
     return {
       p1Name: this.config.p1Name,
       p2Name: this.config.p2Name,
@@ -635,73 +805,29 @@ export class TennisEngine {
       isMatchPoint: this.state.currentGame.isMatchPoint,
       shouldChangeEnds: this.state.shouldChangeEnds,
       totalPoints: this.points.length,
+      trackedPoints: trackedPoints.length,
     };
   }
 
   /**
-   * Replaces match points to match a specific multi-set & game score state.
-   * Useful when joining mid-match or skipping games.
+   * Sets match score directly to match a specific multi-set & game score state.
+   * Preserves previously tracked points and avoids injecting synthetic dummy points.
    */
   setExactScore({ sets, p1GamePoints = 0, p2GamePoints = 0 }) {
-    this.points = [];
-    this.state = this.getInitialState();
+    const jumpEvent = {
+      id: `jump_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+      type: 'score_jump',
+      isUntracked: true,
+      sets: (sets || []).map(s => ({ p1: parseInt(s.p1 || 0, 10), p2: parseInt(s.p2 || 0, 10) })),
+      p1GamePoints: parseInt(p1GamePoints || 0, 10),
+      p2GamePoints: parseInt(p2GamePoints || 0, 10),
+      timestamp: Date.now(),
+      comment: 'Score jump / sync',
+    };
 
-    if (Array.isArray(sets)) {
-      sets.forEach((setScore) => {
-        const p1G = setScore.p1 || 0;
-        const p2G = setScore.p2 || 0;
-        
-        let p1Added = 0;
-        let p2Added = 0;
-
-        while (p1Added < p1G || p2Added < p2G) {
-          if (p1Added < p1G) {
-            for (let p = 0; p < 4; p++) {
-              this.addPoint({
-                winnerPlayer: 'P1',
-                outcome: 'winner',
-                shotType: 'forehand',
-                rallyLength: '1-4',
-                comment: 'Score sync',
-              });
-            }
-            p1Added++;
-          }
-          if (p2Added < p2G) {
-            for (let p = 0; p < 4; p++) {
-              this.addPoint({
-                winnerPlayer: 'P2',
-                outcome: 'winner',
-                shotType: 'forehand',
-                rallyLength: '1-4',
-                comment: 'Score sync',
-              });
-            }
-            p2Added++;
-          }
-        }
-      });
-    }
-
-    // Add in-game points (0=0, 1=15, 2=30, 3=40)
-    for (let p = 0; p < p1GamePoints; p++) {
-      this.addPoint({
-        winnerPlayer: 'P1',
-        outcome: 'winner',
-        shotType: 'forehand',
-        rallyLength: '1-4',
-        comment: 'Score sync point',
-      });
-    }
-    for (let p = 0; p < p2GamePoints; p++) {
-      this.addPoint({
-        winnerPlayer: 'P2',
-        outcome: 'winner',
-        shotType: 'forehand',
-        rallyLength: '1-4',
-        comment: 'Score sync point',
-      });
-    }
+    this.points.push(jumpEvent);
+    this.recalculateStateFromPoints();
+    return jumpEvent;
   }
 
   /**
