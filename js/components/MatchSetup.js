@@ -34,7 +34,25 @@ export class MatchSetupComponent {
     this.render();
   }
 
+  syncFormInputsFromDOM() {
+    const p1In = this.container.querySelector('#input-p1-name');
+    if (p1In) this.formData.p1Name = p1In.value;
+    const p2In = this.container.querySelector('#input-p2-name');
+    if (p2In) this.formData.p2Name = p2In.value;
+    const dateIn = this.container.querySelector('#input-match-date');
+    if (dateIn) this.formData.matchDate = dateIn.value;
+    const tournIn = this.container.querySelector('#input-tournament');
+    if (tournIn) this.formData.tournament = tournIn.value;
+    const surfIn = this.container.querySelector('#select-surface');
+    if (surfIn) this.formData.surface = surfIn.value;
+    const envIn = this.container.querySelector('#select-env');
+    if (envIn) this.formData.environment = envIn.value;
+  }
+
   render() {
+    const mainEl = this.container.querySelector('main');
+    const prevScrollTop = mainEl ? mainEl.scrollTop : 0;
+
     this.container.innerHTML = `
       <div class="setup-root flex flex-col h-full bg-slate-950 text-slate-100 select-none">
         
@@ -185,6 +203,12 @@ export class MatchSetupComponent {
     `;
 
     this.attachEventListeners();
+
+    // Preserve scroll position across renders on iOS
+    const newMainEl = this.container.querySelector('main');
+    if (newMainEl && prevScrollTop > 0) {
+      newMainEl.scrollTop = prevScrollTop;
+    }
   }
 
   attachEventListeners() {
@@ -208,15 +232,37 @@ export class MatchSetupComponent {
       this.updateServerLabels();
     };
 
+    const tourIn = this.container.querySelector('#input-tournament');
+    if (tourIn) tourIn.oninput = (e) => {
+      this.formData.tournament = e.target.value;
+    };
+
+    const dateIn = this.container.querySelector('#input-match-date');
+    if (dateIn) dateIn.onchange = (e) => {
+      this.formData.matchDate = e.target.value;
+    };
+
+    const surfIn = this.container.querySelector('#select-surface');
+    if (surfIn) surfIn.onchange = (e) => {
+      this.formData.surface = e.target.value;
+    };
+
+    const envIn = this.container.querySelector('#select-env');
+    if (envIn) envIn.onchange = (e) => {
+      this.formData.environment = e.target.value;
+    };
+
     // Child toggles
     const p1ChildBtn = this.container.querySelector('#btn-toggle-p1-child');
     if (p1ChildBtn) p1ChildBtn.onclick = () => {
+      this.syncFormInputsFromDOM();
       this.formData.p1Child = !this.formData.p1Child;
       this.render();
     };
 
     const p2ChildBtn = this.container.querySelector('#btn-toggle-p2-child');
     if (p2ChildBtn) p2ChildBtn.onclick = () => {
+      this.syncFormInputsFromDOM();
       this.formData.p2Child = !this.formData.p2Child;
       this.render();
     };
@@ -224,12 +270,14 @@ export class MatchSetupComponent {
     // Server choice
     const s1Btn = this.container.querySelector('#btn-server-p1');
     if (s1Btn) s1Btn.onclick = () => {
+      this.syncFormInputsFromDOM();
       this.formData.firstServer = 'P1';
       this.render();
     };
 
     const s2Btn = this.container.querySelector('#btn-server-p2');
     if (s2Btn) s2Btn.onclick = () => {
+      this.syncFormInputsFromDOM();
       this.formData.firstServer = 'P2';
       this.render();
     };
@@ -237,6 +285,7 @@ export class MatchSetupComponent {
     // Preset selector
     this.container.querySelectorAll('.btn-preset-select').forEach(btn => {
       btn.onclick = () => {
+        this.syncFormInputsFromDOM();
         const key = btn.getAttribute('data-preset');
         this.selectedPresetKey = key;
         const preset = FORMAT_PRESETS[key];
@@ -251,12 +300,14 @@ export class MatchSetupComponent {
     // Rule toggles
     const advBtn = this.container.querySelector('#btn-toggle-advantage');
     if (advBtn) advBtn.onclick = () => {
+      this.syncFormInputsFromDOM();
       this.formData.advantageScoring = !this.formData.advantageScoring;
       this.render();
     };
 
     const tbWin2Btn = this.container.querySelector('#btn-toggle-tbwin2');
     if (tbWin2Btn) tbWin2Btn.onclick = () => {
+      this.syncFormInputsFromDOM();
       this.formData.tiebreakWinBy2 = !this.formData.tiebreakWinBy2;
       this.render();
     };
@@ -264,25 +315,31 @@ export class MatchSetupComponent {
     // Start match
     const startBtn = this.container.querySelector('#btn-start-match');
     if (startBtn) {
-      startBtn.onclick = async () => {
-        const p1 = (this.formData.p1Name || '').trim() || 'Player 1';
-        const p2 = (this.formData.p2Name || '').trim() || 'Player 2';
+      startBtn.onclick = async (e) => {
+        e.preventDefault();
+        try {
+          this.syncFormInputsFromDOM();
+          const p1 = (this.formData.p1Name || '').trim() || 'Player 1';
+          const p2 = (this.formData.p2Name || '').trim() || 'Player 2';
 
-        // Auto save players to directory
-        await TennisStorage.savePlayer({ name: p1, isChild: this.formData.p1Child });
-        await TennisStorage.savePlayer({ name: p2, isChild: this.formData.p2Child });
+          // Auto save players to directory without blocking
+          try {
+            await TennisStorage.savePlayer({ name: p1, isChild: this.formData.p1Child });
+            await TennisStorage.savePlayer({ name: p2, isChild: this.formData.p2Child });
+          } catch (storageErr) {
+            console.warn('Player auto-save warning:', storageErr);
+          }
 
-        const matchConfig = {
-          ...this.formData,
-          p1Name: p1,
-          p2Name: p2,
-          matchDate: this.container.querySelector('#input-match-date')?.value || this.formData.matchDate,
-          tournament: this.container.querySelector('#input-tournament')?.value || '',
-          surface: this.container.querySelector('#select-surface')?.value || 'hard',
-          environment: this.container.querySelector('#select-env')?.value || 'outdoor',
-        };
+          const matchConfig = {
+            ...this.formData,
+            p1Name: p1,
+            p2Name: p2,
+          };
 
-        this.onStartMatch(matchConfig);
+          this.onStartMatch(matchConfig);
+        } catch (err) {
+          console.error('Error starting match:', err);
+        }
       };
     }
   }

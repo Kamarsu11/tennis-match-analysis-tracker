@@ -229,4 +229,60 @@ console.log('🧪 Starting TennisEngine & Stats Automated Test Suite...');
   console.log('✅ Test 6 Passed: Set Exact Score (Mid-Match Jump & Tracked Point Preservation)');
 }
 
+// Test 7: Player Name Editing & Server Switching
+{
+  const engine = new TennisEngine({
+    ...FORMAT_PRESETS.STANDARD_BEST_OF_3,
+    p1Name: 'Leo',
+    p2Name: 'Max',
+    firstServer: 'P1',
+  });
+
+  // Leo is first server
+  assert(engine.state.currentGame.server === 'P1', 'Leo (P1) is initial server');
+
+  // Kids chose Max to serve before match starts
+  engine.switchServer('P2');
+  assert(engine.state.currentGame.server === 'P2', 'Server switched to Max (P2)');
+  assert(engine.config.firstServer === 'P2', 'Config firstServer updated to P2');
+
+  // Play 1 point with Max serving
+  engine.addPoint({ winnerPlayer: 'P2', outcome: 'ace' });
+  assert(engine.points[0].server === 'P2', 'Point 1 server is P2');
+
+  // Switch server during game (e.g. kid served out of turn)
+  engine.switchServer('P1');
+  assert(engine.state.currentGame.server === 'P1', 'Server switched to P1 during game');
+
+  // Play next point with P1 serving
+  engine.addPoint({ winnerPlayer: 'P1', outcome: 'winner', shotType: 'forehand' });
+  assert(engine.points[2].server === 'P1', 'Point logged with P1 serving');
+
+  // Edit player names
+  engine.updatePlayers({ p1Name: 'Leo Smith', p2Name: 'Max Davis', p1Child: true });
+  assert(engine.config.p1Name === 'Leo Smith', 'P1 Name updated');
+  assert(engine.config.p2Name === 'Max Davis', 'P2 Name updated');
+  assert(engine.config.p1Child === true, 'P1 Child flag updated');
+
+  console.log('✅ Test 7 Passed: Player Name Editing & Server Switching');
+}
+
+// Test 8: Updated Diagnostic Error Causes
+{
+  const engine = new TennisEngine(FORMAT_PRESETS.STANDARD_BEST_OF_3);
+  engine.addPoint({ winnerPlayer: 'P1', outcome: 'unforced_error', errorCause: 'spacing' });
+  engine.addPoint({ winnerPlayer: 'P2', outcome: 'forced_error', errorCause: 'let_ball' });
+  engine.addPoint({ winnerPlayer: 'P1', outcome: 'unforced_error', errorCause: 'above_shoulder' });
+  engine.addPoint({ winnerPlayer: 'P2', outcome: 'unforced_error', errorCause: 'mindset' });
+
+  assert(TennisStats.formatCause('spacing') === 'Spacing', 'Spacing formatted');
+  assert(TennisStats.formatCause('let_ball') === 'Let ball', 'Let ball formatted');
+  assert(TennisStats.formatCause('above_shoulder') === 'Above Shoulder', 'Above Shoulder formatted');
+  assert(TennisStats.formatCause('mindset') === 'Mindset', 'Mindset formatted');
+
+  const stats = TennisStats.calculate(engine.points, engine.config);
+  assert(stats.totalPoints === 4, 'All 4 points calculated');
+  console.log('✅ Test 8 Passed: Updated Diagnostic Error Causes');
+}
+
 console.log('🎉 ALL ENGINE & STATS TESTS PASSED PERFECTLY!');

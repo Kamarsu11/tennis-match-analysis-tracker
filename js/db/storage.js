@@ -118,20 +118,37 @@ export class TennisStorage {
   }
 
   static async savePlayer(player) {
+    if (!player || !player.name || !player.name.trim()) return null;
     const db = await this.getDB();
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(['players'], 'readwrite');
-      const store = tx.objectStore('players');
-      const record = {
-        id: player.id || `p_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
-        name: player.name.trim(),
-        isChild: player.isChild || false,
-        hand: player.hand || 'right',
-        updatedAt: Date.now(),
-      };
-      const request = store.put(record);
-      request.onsuccess = () => resolve(record);
-      request.onerror = () => reject(request.error);
+    const cleanName = player.name.trim();
+
+    return new Promise((resolve) => {
+      try {
+        const tx = db.transaction(['players'], 'readwrite');
+        const store = tx.objectStore('players');
+        const index = store.index('name');
+        const getReq = index.get(cleanName);
+
+        getReq.onsuccess = () => {
+          const existing = getReq.result;
+          const record = {
+            id: existing ? existing.id : (player.id || `p_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`),
+            name: cleanName,
+            isChild: player.isChild !== undefined ? player.isChild : (existing?.isChild || false),
+            hand: player.hand || existing?.hand || 'right',
+            updatedAt: Date.now(),
+          };
+          const putReq = store.put(record);
+          putReq.onsuccess = () => resolve(record);
+          putReq.onerror = () => resolve(null);
+        };
+
+        getReq.onerror = () => resolve(null);
+        tx.onerror = () => resolve(null);
+      } catch (err) {
+        console.warn('Could not save player to directory:', err);
+        resolve(null);
+      }
     });
   }
 

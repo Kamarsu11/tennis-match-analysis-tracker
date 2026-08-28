@@ -316,6 +316,12 @@ export class TennisStats {
    */
   static formatCause(cause) {
     const map = {
+      'spacing': 'Spacing',
+      'let_ball': 'Let ball',
+      'above_shoulder': 'Above Shoulder',
+      'above_sholder': 'Above Shoulder',
+      'mindset': 'Mindset',
+      // Backward compatibility for existing data
       'normal_execution': 'Execution / Timing',
       'depth': 'Opponent Deep Ball',
       'pace_rushed': 'Heavy Pace / Rushed',

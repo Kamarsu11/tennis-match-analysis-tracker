@@ -134,9 +134,11 @@ export class PointTrackerComponent {
 
             <!-- Sub-Scorebar Details -->
             <div class="mt-1.5 pt-1.5 border-t border-slate-800/60 flex items-center justify-between text-[11px] text-slate-400">
-              <div>
-                Server: <strong class="text-slate-200">${curGame.server === 'P1' ? sb.p1Name : sb.p2Name}</strong>
-                (${curGame.servingSide.toUpperCase()} Side)
+              <div class="flex items-center gap-1.5">
+                <span>Server: <strong class="text-slate-200">${curGame.server === 'P1' ? sb.p1Name : sb.p2Name}</strong> (${curGame.servingSide.toUpperCase()})</span>
+                <button id="btn-quick-swap-server" type="button" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-lime-400 border border-slate-700 active:scale-95 text-[10px] font-bold" title="Tap to switch who is serving">
+                  ⇄ Switch
+                </button>
               </div>
               <div>
                 Set ${sb.currentSet} ${sb.isTiebreak ? '• <strong class="text-indigo-400">TIE-BREAK</strong>' : `• Game ${curGame.gameIndexInSet + 1}`}
@@ -410,18 +412,14 @@ export class PointTrackerComponent {
                 ${draft.errorCause ? '<span class="text-emerald-400 text-[10px]">Selected ✓</span>' : '<span class="text-slate-400 text-[10px]">Optional</span>'}
               </div>
 
-              <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 ${[
-                  { id: 'normal_execution', label: 'Execution / Timing' },
-                  { id: 'depth', label: 'Deep Ball' },
-                  { id: 'pace_rushed', label: 'Heavy Pace / Rushed' },
-                  { id: 'high_heavy', label: 'High Topspin' },
-                  { id: 'low_slice', label: 'Low / Slice' },
-                  { id: 'wide', label: 'Wide / Stretched' },
-                  { id: 'poor_footwork', label: 'Footwork / Balance' },
-                  { id: 'short_angle', label: 'Short Angle' }
+                  { id: 'spacing', label: 'Spacing' },
+                  { id: 'let_ball', label: 'Let ball' },
+                  { id: 'above_shoulder', label: 'Above Shoulder' },
+                  { id: 'mindset', label: 'Mindset' }
                 ].map(c => `
-                  <button data-cause="${c.id}" class="btn-select-cause py-1.5 px-2 rounded-lg text-[11px] font-medium text-center border transition-all active:scale-95 ${draft.errorCause === c.id ? 'bg-amber-700 text-white border-amber-500' : 'bg-slate-900 text-slate-300 border-slate-800 hover:border-slate-700'}">
+                  <button data-cause="${c.id}" class="btn-select-cause py-2.5 px-2 rounded-xl text-xs font-bold text-center border transition-all active:scale-95 ${draft.errorCause === c.id ? 'bg-amber-600 text-white border-amber-400 shadow-md shadow-amber-500/20' : 'bg-slate-900 text-slate-300 border-slate-800 hover:border-slate-700'}">
                     ${c.label}
                   </button>
                 `).join('')}
@@ -575,14 +573,10 @@ export class PointTrackerComponent {
                 <label class="block text-slate-400 font-semibold mb-1">Cause / Diagnostic</label>
                 <select id="edit-cause-select" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white">
                   <option value="">None / Default</option>
-                  <option value="normal_execution" ${pt.errorCause === 'normal_execution' ? 'selected' : ''}>Execution / Timing</option>
-                  <option value="depth" ${pt.errorCause === 'depth' ? 'selected' : ''}>Deep Ball</option>
-                  <option value="pace_rushed" ${pt.errorCause === 'pace_rushed' ? 'selected' : ''}>Heavy Pace / Rushed</option>
-                  <option value="high_heavy" ${pt.errorCause === 'high_heavy' ? 'selected' : ''}>High Topspin</option>
-                  <option value="low_slice" ${pt.errorCause === 'low_slice' ? 'selected' : ''}>Low / Slice</option>
-                  <option value="wide" ${pt.errorCause === 'wide' ? 'selected' : ''}>Wide / Stretched</option>
-                  <option value="poor_footwork" ${pt.errorCause === 'poor_footwork' ? 'selected' : ''}>Footwork / Balance</option>
-                  <option value="short_angle" ${pt.errorCause === 'short_angle' ? 'selected' : ''}>Short Angle</option>
+                  <option value="spacing" ${pt.errorCause === 'spacing' ? 'selected' : ''}>Spacing</option>
+                  <option value="let_ball" ${pt.errorCause === 'let_ball' ? 'selected' : ''}>Let ball</option>
+                  <option value="above_shoulder" ${(pt.errorCause === 'above_shoulder' || pt.errorCause === 'above_sholder') ? 'selected' : ''}>Above Shoulder</option>
+                  <option value="mindset" ${pt.errorCause === 'mindset' ? 'selected' : ''}>Mindset</option>
                 </select>
               </div>
 
@@ -609,7 +603,7 @@ export class PointTrackerComponent {
     if (this.activeModal === 'all_points') {
       const points = this.engine.points;
       const config = this.engine.config;
-      const trackedCount = points.filter(p => !p.isUntracked && p.type !== 'score_jump').length;
+      const trackedCount = points.filter(p => !p.isUntracked && p.type !== 'score_jump' && p.type !== 'server_switch').length;
 
       return `
         <div class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -621,7 +615,7 @@ export class PointTrackerComponent {
 
             <div class="flex-1 overflow-y-auto space-y-2 pr-1 text-xs">
               ${points.length === 0 ? '<div class="text-slate-400 italic text-center py-4">No points logged yet.</div>' : points.slice().reverse().map(pt => {
-                if (pt.type === 'score_jump' || pt.isUntracked) {
+                if (pt.type === 'score_jump') {
                   return `
                     <div class="p-2.5 rounded-xl bg-indigo-950/60 border border-indigo-700/60 flex items-center justify-between gap-2">
                       <div>
@@ -632,6 +626,19 @@ export class PointTrackerComponent {
                         <div class="text-[10px] text-indigo-300/80">Untracked games skipped / score synchronized</div>
                       </div>
                       <button data-delete-jump-id="${pt.id}" class="btn-delete-jump text-xs text-rose-400 hover:text-rose-300 px-2 py-1 bg-rose-950/50 rounded-lg border border-rose-800 shrink-0 active:scale-95">✕ Remove</button>
+                    </div>
+                  `;
+                }
+
+                if (pt.type === 'server_switch') {
+                  const sName = pt.server === 'P1' ? config.p1Name : config.p2Name;
+                  return `
+                    <div class="p-2 rounded-xl bg-slate-950 border border-lime-800/40 flex items-center justify-between gap-2 text-[11px]">
+                      <div class="flex items-center gap-1.5 text-lime-300 font-bold">
+                        <span>🎾 Server Changed →</span>
+                        <span class="text-white">${sName}</span>
+                      </div>
+                      <button data-delete-jump-id="${pt.id}" class="btn-delete-jump text-[10px] text-rose-400 hover:text-rose-300 px-1.5 py-0.5 bg-rose-950/50 rounded border border-rose-800 shrink-0">✕ Undo</button>
                     </div>
                   `;
                 }
@@ -663,12 +670,67 @@ export class PointTrackerComponent {
     }
 
     if (this.activeModal === 'manual_override') {
+      const p1 = this.engine.config.p1Name;
+      const p2 = this.engine.config.p2Name;
+      const p1Child = this.engine.config.p1Child;
+      const p2Child = this.engine.config.p2Child;
+      const curServer = this.engine.state.currentGame.server;
+
       return `
         <div class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-4 space-y-3">
-            <h3 class="text-base font-bold text-white">⚙️ Match Settings & Quick Controls</h3>
-            <p class="text-xs text-slate-400">Jump to specific set/game score or manage screen lock.</p>
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-4 space-y-3.5 animate-slideUp max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+              <h3 class="text-base font-bold text-white">⚙️ Match Settings & Controls</h3>
+              <button id="btn-close-modal" class="text-slate-400 hover:text-white text-lg font-bold">✕</button>
+            </div>
 
+            <!-- 1. EDIT PLAYERS -->
+            <div class="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-2.5">
+              <div class="font-bold text-xs text-slate-200">Edit Player Names</div>
+              
+              <div class="space-y-1">
+                <label class="block text-[10px] text-slate-400">Player 1</label>
+                <div class="flex items-center gap-2">
+                  <input id="edit-player-p1-name" type="text" value="${p1}" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white font-bold">
+                  <button id="btn-edit-toggle-p1-child" type="button" class="px-2.5 py-1.5 rounded-lg border text-[11px] font-bold ${p1Child ? 'bg-sky-900/60 border-sky-400 text-sky-200' : 'bg-slate-900 border-slate-700 text-slate-400'}">
+                    ${p1Child ? '⭐️ Child' : 'Child?'}
+                  </button>
+                </div>
+              </div>
+
+              <div class="space-y-1">
+                <label class="block text-[10px] text-slate-400">Player 2</label>
+                <div class="flex items-center gap-2">
+                  <input id="edit-player-p2-name" type="text" value="${p2}" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white font-bold">
+                  <button id="btn-edit-toggle-p2-child" type="button" class="px-2.5 py-1.5 rounded-lg border text-[11px] font-bold ${p2Child ? 'bg-sky-900/60 border-sky-400 text-sky-200' : 'bg-slate-900 border-slate-700 text-slate-400'}">
+                    ${p2Child ? '⭐️ Child' : 'Child?'}
+                  </button>
+                </div>
+              </div>
+
+              <button id="btn-save-player-names" class="w-full py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs active:scale-95">
+                ✓ Update Player Info
+              </button>
+            </div>
+
+            <!-- 2. EDIT / SWITCH SERVER -->
+            <div class="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-2">
+              <div class="font-bold text-xs text-slate-200 flex items-center justify-between">
+                <span>Who is Serving this Game?</span>
+                <span class="text-[10px] text-lime-400 font-semibold">Current: ${curServer === 'P1' ? p1 : p2}</span>
+              </div>
+              <p class="text-[11px] text-slate-400">Kids chose to serve or served out of turn? Switch server below:</p>
+              <div class="grid grid-cols-2 gap-2">
+                <button id="btn-set-server-p1" type="button" class="py-2 px-3 rounded-lg border text-xs font-bold transition-all active:scale-95 ${curServer === 'P1' ? 'bg-lime-500 text-slate-950 border-lime-400 shadow-md shadow-lime-500/20' : 'bg-slate-900 text-slate-300 border-slate-700'}">
+                  🎾 ${p1} Serving
+                </button>
+                <button id="btn-set-server-p2" type="button" class="py-2 px-3 rounded-lg border text-xs font-bold transition-all active:scale-95 ${curServer === 'P2' ? 'bg-lime-500 text-slate-950 border-lime-400 shadow-md shadow-lime-500/20' : 'bg-slate-900 text-slate-300 border-slate-700'}">
+                  🎾 ${p2} Serving
+                </button>
+              </div>
+            </div>
+
+            <!-- 3. SCORE JUMP & QUICK ACTIONS -->
             <div class="space-y-2">
               <button id="btn-open-jump-score" class="w-full py-2.5 px-3 rounded-xl bg-indigo-950/60 border border-indigo-700 text-left flex items-center justify-between text-xs font-bold text-indigo-200 active:scale-95">
                 <span>⏩ Set / Jump Exact Match Score (Mid-match Join)</span>
@@ -676,12 +738,12 @@ export class PointTrackerComponent {
               </button>
 
               <button id="btn-quick-add-p1" class="w-full py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-left flex items-center justify-between text-xs font-semibold">
-                <span>+1 Fast Point to ${this.engine.config.p1Name} (Unobserved)</span>
+                <span>+1 Fast Point to ${p1} (Unobserved)</span>
                 <span class="text-emerald-400">⚡</span>
               </button>
 
               <button id="btn-quick-add-p2" class="w-full py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-left flex items-center justify-between text-xs font-semibold">
-                <span>+1 Fast Point to ${this.engine.config.p2Name} (Unobserved)</span>
+                <span>+1 Fast Point to ${p2} (Unobserved)</span>
                 <span class="text-emerald-400">⚡</span>
               </button>
 
@@ -1107,6 +1169,70 @@ export class PointTrackerComponent {
       };
     }
 
+    // Quick Swap Server from Scoreboard
+    const btnQuickSwapServer = this.container.querySelector('#btn-quick-swap-server');
+    if (btnQuickSwapServer) {
+      btnQuickSwapServer.onclick = () => {
+        this.engine.switchServer();
+        this.onStateChange();
+        this.render();
+      };
+    }
+
+    // Modal Set Server P1 / P2
+    const btnSetSrvP1 = this.container.querySelector('#btn-set-server-p1');
+    if (btnSetSrvP1) {
+      btnSetSrvP1.onclick = () => {
+        this.engine.switchServer('P1');
+        this.onStateChange();
+        this.render();
+      };
+    }
+
+    const btnSetSrvP2 = this.container.querySelector('#btn-set-server-p2');
+    if (btnSetSrvP2) {
+      btnSetSrvP2.onclick = () => {
+        this.engine.switchServer('P2');
+        this.onStateChange();
+        this.render();
+      };
+    }
+
+    // Modal Player Child Toggles
+    const btnEditChild1 = this.container.querySelector('#btn-edit-toggle-p1-child');
+    if (btnEditChild1) {
+      btnEditChild1.onclick = () => {
+        this.engine.config.p1Child = !this.engine.config.p1Child;
+        this.render();
+      };
+    }
+
+    const btnEditChild2 = this.container.querySelector('#btn-edit-toggle-p2-child');
+    if (btnEditChild2) {
+      btnEditChild2.onclick = () => {
+        this.engine.config.p2Child = !this.engine.config.p2Child;
+        this.render();
+      };
+    }
+
+    // Modal Save Player Names
+    const btnSavePlayers = this.container.querySelector('#btn-save-player-names');
+    if (btnSavePlayers) {
+      btnSavePlayers.onclick = () => {
+        const p1Val = this.container.querySelector('#edit-player-p1-name')?.value;
+        const p2Val = this.container.querySelector('#edit-player-p2-name')?.value;
+        this.engine.updatePlayers({
+          p1Name: p1Val,
+          p2Name: p2Val,
+          p1Child: this.engine.config.p1Child,
+          p2Child: this.engine.config.p2Child,
+        });
+        this.activeModal = null;
+        this.onStateChange();
+        this.render();
+      };
+    }
+
     // Jump Score trigger
     const btnOpenJump = this.container.querySelector('#btn-open-jump-score');
     if (btnOpenJump) {
@@ -1216,6 +1342,12 @@ export class PointTrackerComponent {
 
   formatCause(cause) {
     const map = {
+      'spacing': 'Spacing',
+      'let_ball': 'Let ball',
+      'above_shoulder': 'Above Shoulder',
+      'above_sholder': 'Above Shoulder',
+      'mindset': 'Mindset',
+      // Backward compatibility for existing match logs
       'normal_execution': 'Execution / Timing',
       'depth': 'Opponent Deep Ball',
       'pace_rushed': 'Heavy Pace / Rushed',

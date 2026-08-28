@@ -249,6 +249,9 @@ export class TennisEngine {
 
       if (pt.type === 'score_jump') {
         this.applyScoreJumpTransition(pt);
+      } else if (pt.type === 'server_switch') {
+        this.state.currentGame.server = pt.server;
+        this.state.currentGame.receiver = pt.receiver;
       } else {
         trackedCount++;
         pt.trackedIndex = trackedCount;
@@ -828,6 +831,51 @@ export class TennisEngine {
     this.points.push(jumpEvent);
     this.recalculateStateFromPoints();
     return jumpEvent;
+  }
+
+  /**
+   * Updates player names and child flags mid-match
+   */
+  updatePlayers({ p1Name, p2Name, p1Child, p2Child }) {
+    if (p1Name !== undefined) this.config.p1Name = (p1Name || '').trim() || 'Player 1';
+    if (p2Name !== undefined) this.config.p2Name = (p2Name || '').trim() || 'Player 2';
+    if (p1Child !== undefined) this.config.p1Child = Boolean(p1Child);
+    if (p2Child !== undefined) this.config.p2Child = Boolean(p2Child);
+  }
+
+  /**
+   * Switches or explicitly sets the active server for the current game
+   */
+  switchServer(targetServer) {
+    const newServer = (targetServer === 'P1' || targetServer === 'P2')
+      ? targetServer
+      : (this.state.currentGame.server === 'P1' ? 'P2' : 'P1');
+    const newReceiver = newServer === 'P1' ? 'P2' : 'P1';
+
+    if (this.points.length === 0) {
+      this.config.firstServer = newServer;
+      this.state = this.getInitialState();
+      return;
+    }
+
+    const lastPt = this.points[this.points.length - 1];
+    if (lastPt && lastPt.type === 'server_switch') {
+      lastPt.server = newServer;
+      lastPt.receiver = newReceiver;
+      lastPt.comment = `Server set to ${newServer === 'P1' ? this.config.p1Name : this.config.p2Name}`;
+    } else {
+      this.points.push({
+        id: `srv_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+        type: 'server_switch',
+        isUntracked: true,
+        server: newServer,
+        receiver: newReceiver,
+        timestamp: Date.now(),
+        comment: `Server set to ${newServer === 'P1' ? this.config.p1Name : this.config.p2Name}`,
+      });
+    }
+
+    this.recalculateStateFromPoints();
   }
 
   /**

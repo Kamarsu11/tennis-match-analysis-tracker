@@ -297,14 +297,10 @@ export class AnalyticsViewComponent {
                 <label class="block text-[10px] text-slate-400 font-semibold mb-0.5">Cause / Error Reason</label>
                 <select id="filter-cause" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-[11px] text-white">
                   <option value="all">All Causes</option>
-                  <option value="normal_execution" ${this.activeFilter.errorCause === 'normal_execution' ? 'selected' : ''}>Execution / Timing</option>
-                  <option value="depth" ${this.activeFilter.errorCause === 'depth' ? 'selected' : ''}>Deep Ball</option>
-                  <option value="pace_rushed" ${this.activeFilter.errorCause === 'pace_rushed' ? 'selected' : ''}>Heavy Pace / Rushed</option>
-                  <option value="high_heavy" ${this.activeFilter.errorCause === 'high_heavy' ? 'selected' : ''}>High Topspin</option>
-                  <option value="low_slice" ${this.activeFilter.errorCause === 'low_slice' ? 'selected' : ''}>Low / Slice</option>
-                  <option value="wide" ${this.activeFilter.errorCause === 'wide' ? 'selected' : ''}>Wide / Stretched</option>
-                  <option value="poor_footwork" ${this.activeFilter.errorCause === 'poor_footwork' ? 'selected' : ''}>Footwork / Balance</option>
-                  <option value="short_angle" ${this.activeFilter.errorCause === 'short_angle' ? 'selected' : ''}>Short Angle</option>
+                  <option value="spacing" ${this.activeFilter.errorCause === 'spacing' ? 'selected' : ''}>Spacing</option>
+                  <option value="let_ball" ${this.activeFilter.errorCause === 'let_ball' ? 'selected' : ''}>Let ball</option>
+                  <option value="above_shoulder" ${this.activeFilter.errorCause === 'above_shoulder' ? 'selected' : ''}>Above Shoulder</option>
+                  <option value="mindset" ${this.activeFilter.errorCause === 'mindset' ? 'selected' : ''}>Mindset</option>
                 </select>
               </div>
             </div>
