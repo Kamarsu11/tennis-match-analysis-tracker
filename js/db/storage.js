@@ -177,6 +177,7 @@ export class TennisStorage {
       'Score Before P2',
       'Server',
       'Receiver',
+      'Serve Attempt',
       'Serving Side',
       'Is Break Point',
       'Is Game Point',
@@ -188,10 +189,14 @@ export class TennisStorage {
       'Court Position',
       'Rally Length',
       'Net Approach',
+      'Error Miss Location',
       'Error / Forcing Cause',
-      'Comment',
+      'Point Note',
+      'Match Notes',
       'Timestamp',
     ];
+
+    const matchNotes = (match.config?.notes || '').replace(/"/g, '""');
 
     const rows = (match.points || []).map((pt, idx) => {
       if (pt.type === 'score_jump' || pt.isUntracked) {
@@ -199,6 +204,7 @@ export class TennisStorage {
           idx + 1,
           (pt.setIndex || 0) + 1,
           (pt.gameIndex || 0) + 1,
+          '""',
           '""',
           '""',
           '""',
@@ -215,7 +221,9 @@ export class TennisStorage {
           '',
           '',
           '""',
+          '""',
           `"${(pt.summary || pt.comment || 'Score Jump').replace(/"/g, '""')}"`,
+          `"${matchNotes}"`,
           new Date(pt.timestamp || Date.now()).toISOString(),
         ].join(',');
       }
@@ -223,6 +231,7 @@ export class TennisStorage {
       const winnerName = pt.winnerPlayer === 'P1' ? match.config.p1Name : match.config.p2Name;
       const serverName = pt.server === 'P1' ? match.config.p1Name : match.config.p2Name;
       const receiverName = pt.receiver === 'P1' ? match.config.p1Name : match.config.p2Name;
+      const serveAttempt = pt.serve === '2nd' || pt.outcome === 'double_fault' ? '2nd' : '1st';
 
       return [
         idx + 1,
@@ -232,6 +241,7 @@ export class TennisStorage {
         pt.scoreBefore ? `"${pt.scoreBefore.p2Display}"` : '""',
         `"${serverName}"`,
         `"${receiverName}"`,
+        `"${serveAttempt}"`,
         pt.servingSide || '',
         pt.isBreakPoint ? 'YES' : 'NO',
         pt.isGamePoint ? 'YES' : 'NO',
@@ -243,8 +253,10 @@ export class TennisStorage {
         pt.courtPosition || '',
         pt.rallyLength || '',
         pt.netApproach || '',
+        pt.errorLocation ? `"${pt.errorLocation}"` : '',
         pt.errorCause ? `"${pt.errorCause}"` : '',
         pt.comment ? `"${pt.comment.replace(/"/g, '""')}"` : '""',
+        `"${matchNotes}"`,
         new Date(pt.timestamp || Date.now()).toISOString(),
       ].join(',');
     });
@@ -276,6 +288,7 @@ export class TennisStorage {
       'Score Before P2',
       'Server',
       'Receiver',
+      'Serve Attempt',
       'Serving Side',
       'Is Break Point',
       'Is Game Point',
@@ -288,8 +301,10 @@ export class TennisStorage {
       'Court Position',
       'Rally Length',
       'Net Approach',
+      'Error Miss Location',
       'Error / Forcing Cause',
-      'Comment',
+      'Point Note',
+      'Match Notes',
       'Timestamp',
     ];
 
@@ -300,6 +315,7 @@ export class TennisStorage {
       const p1Name = config.p1Name || 'Player 1';
       const p2Name = config.p2Name || 'Player 2';
       const matchWinnerName = match.state?.matchWinner ? (match.state.matchWinner === 'P1' ? p1Name : p2Name) : '';
+      const matchNotes = (config.notes || '').replace(/"/g, '""');
 
       (match.points || []).forEach((pt, idx) => {
         const winnerName = pt.winnerPlayer === 'P1' ? p1Name : p2Name;
@@ -307,6 +323,7 @@ export class TennisStorage {
         const receiverName = pt.receiver === 'P1' ? p1Name : p2Name;
         const eventPlayerCode = pt.eventPlayer || (pt.outcome === 'unforced_error' || pt.outcome === 'forced_error' || pt.outcome === 'double_fault' ? (pt.winnerPlayer === 'P1' ? 'P2' : 'P1') : pt.winnerPlayer);
         const eventPlayerName = eventPlayerCode === 'P1' ? p1Name : p2Name;
+        const serveAttempt = pt.serve === '2nd' || pt.outcome === 'double_fault' ? '2nd' : '1st';
 
         rows.push([
           `"${match.id}"`,
@@ -328,6 +345,7 @@ export class TennisStorage {
           pt.scoreBefore ? `"${pt.scoreBefore.p2Display}"` : '""',
           `"${serverName}"`,
           `"${receiverName}"`,
+          `"${serveAttempt}"`,
           pt.servingSide || '',
           pt.isBreakPoint ? 'YES' : 'NO',
           pt.isGamePoint ? 'YES' : 'NO',
@@ -340,8 +358,10 @@ export class TennisStorage {
           pt.courtPosition || '',
           pt.rallyLength || '',
           pt.netApproach || '',
+          pt.errorLocation ? `"${pt.errorLocation}"` : '',
           pt.errorCause ? `"${pt.errorCause}"` : '',
           pt.comment ? `"${pt.comment.replace(/"/g, '""')}"` : '""',
+          `"${matchNotes}"`,
           new Date(pt.timestamp || Date.now()).toISOString(),
         ].join(','));
       });

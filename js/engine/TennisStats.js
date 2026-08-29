@@ -61,6 +61,27 @@ export class TennisStats {
       serverStats.servePointsTotal++;
       receiverStats.returnPointsTotal++;
 
+      // 1st vs 2nd Serve tracking
+      // (Double faults are always 2nd serve faults; otherwise check pt.serve === '2nd')
+      const isSecondServe = (pt.serve === '2nd' || pt.outcome === 'double_fault');
+      const isFirstServeIn = !isSecondServe;
+
+      if (isFirstServeIn) {
+        serverStats.firstServesIn++;
+        if (winner === server) {
+          serverStats.firstServePointsWon++;
+        } else {
+          receiverStats.firstServeReturnPointsWon++;
+        }
+      } else {
+        serverStats.secondServesTotal++;
+        if (winner === server) {
+          serverStats.secondServePointsWon++;
+        } else {
+          receiverStats.secondServeReturnPointsWon++;
+        }
+      }
+
       if (winner === server) {
         serverStats.servePointsWon++;
       } else {
@@ -156,6 +177,12 @@ export class TennisStats {
             loserStats.unforcedErrorsByPosition[pos]++;
           }
 
+          // Error Location (Net, Wide Left, Wide Right, Long Out)
+          const errorLoc = pt.errorLocation;
+          if (errorLoc && loserStats.unforcedErrorsByLocation[errorLoc] !== undefined) {
+            loserStats.unforcedErrorsByLocation[errorLoc]++;
+          }
+
           // Hierarchical Diagnostic Aggregation: shot -> position -> cause
           if (!loserStats.errorDiagnosticHierarchy[shot]) {
             loserStats.errorDiagnosticHierarchy[shot] = { total: 0, positions: {}, causes: {} };
@@ -197,10 +224,18 @@ export class TennisStats {
       
       // Serve
       servePointsTotal: 0,
+      firstServesIn: 0,
+      firstServePct: 0,
+      firstServePointsWon: 0,
+      firstServeWonPct: 0,
+      secondServesTotal: 0,
+      secondServePointsWon: 0,
+      secondServeWonPct: 0,
       servePointsWon: 0,
       servePointsWonPct: 0,
       aces: 0,
       doubleFaults: 0,
+      doubleFaultPct: 0,
       serviceWinners: 0,
       breakPointsFaced: 0,
       breakPointsSaved: 0,
@@ -210,6 +245,10 @@ export class TennisStats {
       returnPointsTotal: 0,
       returnPointsWon: 0,
       returnPointsWonPct: 0,
+      firstServeReturnPointsWon: 0,
+      firstServeReturnWonPct: 0,
+      secondServeReturnPointsWon: 0,
+      secondServeReturnWonPct: 0,
       breakPointsOpportunities: 0,
       breakPointsConverted: 0,
       breakPointsConvertedPct: 0,
@@ -227,6 +266,13 @@ export class TennisStats {
       winnerToUERatio: 0,
       aggressiveMarginPct: 0,
       dominanceRatio: 0,
+
+      unforcedErrorsByLocation: {
+        net: 0,
+        wide_left: 0,
+        wide_right: 0,
+        long: 0,
+      },
 
       winnersByShot: {
         serve: 0,
@@ -275,7 +321,11 @@ export class TennisStats {
   static computeDerivedMetrics(p1, p2, totalMatchPoints) {
     [p1, p2].forEach(p => {
       // Serve %
+      p.firstServePct = p.servePointsTotal > 0 ? Math.round((p.firstServesIn / p.servePointsTotal) * 100) : 0;
+      p.firstServeWonPct = p.firstServesIn > 0 ? Math.round((p.firstServePointsWon / p.firstServesIn) * 100) : 0;
+      p.secondServeWonPct = p.secondServesTotal > 0 ? Math.round((p.secondServePointsWon / p.secondServesTotal) * 100) : 0;
       p.servePointsWonPct = p.servePointsTotal > 0 ? Math.round((p.servePointsWon / p.servePointsTotal) * 100) : 0;
+      p.doubleFaultPct = p.servePointsTotal > 0 ? Math.round((p.doubleFaults / p.servePointsTotal) * 100) : 0;
       p.breakPointsSavedPct = p.breakPointsFaced > 0 ? Math.round((p.breakPointsSaved / p.breakPointsFaced) * 100) : 0;
 
       // Return %
@@ -297,6 +347,12 @@ export class TennisStats {
       }
     });
 
+    // Opponent serve return won percentages
+    p1.firstServeReturnWonPct = p2.firstServesIn > 0 ? Math.round((p1.firstServeReturnPointsWon / p2.firstServesIn) * 100) : 0;
+    p1.secondServeReturnWonPct = p2.secondServesTotal > 0 ? Math.round((p1.secondServeReturnPointsWon / p2.secondServesTotal) * 100) : 0;
+    p2.firstServeReturnWonPct = p1.firstServesIn > 0 ? Math.round((p2.firstServeReturnPointsWon / p1.firstServesIn) * 100) : 0;
+    p2.secondServeReturnWonPct = p1.secondServesTotal > 0 ? Math.round((p2.secondServeReturnPointsWon / p1.secondServesTotal) * 100) : 0;
+
     // Dominance Ratio: (Return Points Won %) / (Opponent Return Points Won %)
     if (p2.returnPointsTotal > 0 && p2.returnPointsWonPct > 0) {
       p1.dominanceRatio = Number((p1.returnPointsWonPct / p2.returnPointsWonPct).toFixed(2));
@@ -309,6 +365,19 @@ export class TennisStats {
     } else {
       p2.dominanceRatio = p2.returnPointsWonPct > 0 ? 2.0 : 1.0;
     }
+  }
+
+  /**
+   * Helper to format human friendly location label
+   */
+  static formatLocation(loc) {
+    const map = {
+      'net': 'Net',
+      'wide_left': 'Wide Left',
+      'wide_right': 'Wide Right',
+      'long': 'Long Out',
+    };
+    return map[loc] || loc;
   }
 
   /**

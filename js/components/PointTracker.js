@@ -13,7 +13,7 @@ export class PointTrackerComponent {
 
     // Current in-progress draft point
     this.draft = this.getEmptyDraft();
-    this.activeModal = null; // 'edit_point' | 'manual_override' | 'comment' | 'jump_score' | 'all_points'
+    this.activeModal = null; // 'edit_point' | 'manual_override' | 'comment' | 'jump_score' | 'all_points' | 'match_notes'
     this.editingPointIndex = null;
     this.wakeLock = null;
   }
@@ -22,12 +22,14 @@ export class PointTrackerComponent {
     return {
       eventPlayer: null,   // 'P1' | 'P2' (The player who hit the winner/error)
       winnerPlayer: null,  // 'P1' | 'P2' (The player who gets the point)
+      serve: '1st',        // '1st' | '2nd' (1st serve in vs 2nd serve)
       outcome: null,       // 'ace' | 'double_fault' | 'service_winner' | 'winner' | 'unforced_error' | 'forced_error'
       shotType: null,      // 'forehand' | 'backhand' | 'volley' | 'overhead' | 'drop_shot' | 'return' | 'serve'
       courtPosition: null, // 'deep_baseline' | 'baseline' | 'mid_court' | 'net'
       rallyLength: null,   // '1-4' | '5-8' | '9+'
       netApproach: 'none',
-      errorCause: null,
+      errorCause: null,    // 'spacing' | 'let_ball' | 'above_shoulder' | 'mindset'
+      errorLocation: null, // 'net' | 'wide_left' | 'wide_right' | 'long'
       comment: '',
     };
   }
@@ -87,6 +89,9 @@ export class PointTrackerComponent {
             <div class="flex items-center gap-1">
               <button id="btn-undo" class="px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-amber-300 border border-slate-700 active:scale-95 disabled:opacity-30 disabled:pointer-events-none" ${this.engine.points.length === 0 ? 'disabled' : ''} title="Undo last point">
                 ↩ Undo
+              </button>
+              <button id="btn-open-match-notes" class="px-2 py-1.5 rounded-lg bg-slate-800 text-amber-300 hover:text-amber-200 border border-slate-700 active:scale-95 text-xs font-semibold flex items-center gap-1" title="Match Notes & Observations">
+                📝 Notes
               </button>
               <button id="btn-score-override" class="p-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white border border-slate-700 active:scale-95" title="Match Settings & Game Jump">
                 ⚙️
@@ -279,6 +284,22 @@ export class PointTrackerComponent {
     return `
       <main class="flex-1 overflow-y-auto px-3 py-2 space-y-3 pb-32">
         
+        <!-- SERVE STATUS SELECTOR (1st Serve In vs 2nd Serve) -->
+        <section class="bg-slate-900/90 rounded-xl p-2.5 border border-slate-800 flex items-center justify-between">
+          <div class="flex items-center gap-1.5 text-xs font-bold text-slate-300 truncate">
+            <span>🎾 Serve:</span>
+            <span class="text-lime-300 font-bold truncate">${server === 'P1' ? sb.p1Name : sb.p2Name}</span>
+          </div>
+          <div class="flex items-center gap-1.5 shrink-0">
+            <button type="button" data-serve="1st" class="btn-select-serve px-3 py-1.5 rounded-lg text-xs font-bold transition-all active:scale-95 ${draft.serve !== '2nd' ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/20 border border-emerald-400' : 'bg-slate-950 text-slate-400 border border-slate-800'}">
+              1st Serve In
+            </button>
+            <button type="button" data-serve="2nd" class="btn-select-serve px-3 py-1.5 rounded-lg text-xs font-bold transition-all active:scale-95 ${draft.serve === '2nd' ? 'bg-amber-600 text-white shadow-md shadow-amber-500/20 border border-amber-400' : 'bg-slate-950 text-slate-400 border border-slate-800'}">
+              2nd Serve
+            </button>
+          </div>
+        </section>
+
         <!-- STEP 1: EVENT PLAYER (Whose shot / action is this point about?) -->
         <section>
           <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 flex justify-between items-center">
@@ -404,6 +425,29 @@ export class PointTrackerComponent {
             </div>
           </section>
 
+          <!-- UNFORCED ERROR MISS LOCATION (Net, Left Single Out, Right Single Out, Long Out) -->
+          ${draft.outcome === 'unforced_error' ? `
+            <section class="animate-fadeIn">
+              <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 flex justify-between items-center">
+                <span>Where Did Ball Miss?</span>
+                ${draft.errorLocation ? '<span class="text-emerald-400 text-[10px]">Selected ✓</span>' : '<span class="text-slate-400 text-[10px]">Optional</span>'}
+              </div>
+
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                ${[
+                  { id: 'net', label: '🕸️ Net' },
+                  { id: 'wide_left', label: '⬅️ Wide Left' },
+                  { id: 'wide_right', label: '➡️ Wide Right' },
+                  { id: 'long', label: '⬆️ Long Out' }
+                ].map(loc => `
+                  <button data-location="${loc.id}" class="btn-select-location py-2 px-1.5 rounded-xl text-xs font-bold text-center border transition-all active:scale-95 ${draft.errorLocation === loc.id ? 'bg-rose-600 text-white border-rose-400 shadow-md shadow-rose-500/20' : 'bg-slate-900 text-slate-300 border-slate-800 hover:border-slate-700'}">
+                    ${loc.label}
+                  </button>
+                `).join('')}
+              </div>
+            </section>
+          ` : ''}
+
           <!-- ERROR / FORCING DIAGNOSTIC -->
           ${(draft.outcome === 'unforced_error' || draft.outcome === 'forced_error') ? `
             <section class="animate-fadeIn">
@@ -442,9 +486,13 @@ export class PointTrackerComponent {
         <!-- LIVE SUMMARY CARD (Crystal Clear Semantics Before Logging) -->
         ${draft.winnerPlayer ? `
           <div class="p-3 bg-slate-900/90 rounded-xl border border-emerald-500/40 space-y-1 animate-fadeIn">
-            <div class="text-[11px] font-bold text-emerald-400">📌 Point Preview:</div>
+            <div class="text-[11px] font-bold text-emerald-400 flex items-center justify-between">
+              <span>📌 Point Preview:</span>
+              <span class="text-[10px] font-mono font-bold ${draft.serve === '2nd' ? 'text-amber-300 bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-800' : 'text-emerald-300 bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-800'}">${draft.serve === '2nd' ? '2nd Serve' : '1st Serve In'}</span>
+            </div>
             <div class="text-xs font-semibold text-slate-200">${explanationText}</div>
             ${draft.shotType ? `<div class="text-[11px] text-slate-400">Shot: <strong class="text-white capitalize">${draft.shotType}</strong> from <strong class="text-white">${this.formatPosition(draft.courtPosition)}</strong> (${draft.rallyLength || '1-4'} shots)</div>` : ''}
+            ${draft.errorLocation ? `<div class="text-[11px] text-rose-300">Miss: <strong>${this.formatLocation(draft.errorLocation)}</strong></div>` : ''}
             ${draft.errorCause ? `<div class="text-[11px] text-amber-300">Cause: <strong>${this.formatCause(draft.errorCause)}</strong></div>` : ''}
             ${draft.comment ? `<div class="text-[11px] text-slate-300 italic">Note: "${draft.comment}"</div>` : ''}
           </div>
@@ -484,6 +532,34 @@ export class PointTrackerComponent {
       `;
     }
 
+    if (this.activeModal === 'match_notes') {
+      const notes = this.engine.config.notes || '';
+      return `
+        <div class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-4 space-y-3 animate-slideUp max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+              <h3 class="text-base font-bold text-white flex items-center gap-1.5">
+                <span>📝 Match Notes & Comments</span>
+              </h3>
+              <button id="btn-close-modal" class="text-slate-400 hover:text-white text-lg font-bold">✕</button>
+            </div>
+            <p class="text-xs text-slate-400">Add overarching coaching notes, tactics, opponent patterns, momentum shifts, or match observations as the match progresses.</p>
+
+            <div>
+              <textarea id="input-match-notes-text" rows="7" placeholder="Write overall match comments, tactical patterns, opponent weaknesses, coaching advice..." class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500">${notes}</textarea>
+            </div>
+
+            <div class="flex items-center justify-between gap-2 pt-2 border-t border-slate-800">
+              <button id="btn-close-modal" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 font-semibold text-xs">Cancel</button>
+              <button id="btn-save-match-notes" class="px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shadow-md shadow-emerald-500/20 active:scale-95">
+                ✓ Save Match Notes
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
     if (this.activeModal === 'edit_point' && this.editingPointIndex !== null) {
       const pt = this.engine.points[this.editingPointIndex];
       if (!pt) return '';
@@ -496,6 +572,8 @@ export class PointTrackerComponent {
       const calculatedWinnerName = calculatedWinner === 'P1' ? p1 : p2;
       const eventPlayerName = eventPlayer === 'P1' ? p1 : p2;
       const ptNum = pt.trackedIndex || (this.editingPointIndex + 1);
+      const serveVal = this.editingDraft?.serve || pt.serve || (pt.outcome === 'double_fault' ? '2nd' : '1st');
+      const errorLocVal = this.editingDraft?.errorLocation !== undefined ? this.editingDraft.errorLocation : (pt.errorLocation || '');
 
       return `
         <div class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -517,6 +595,15 @@ export class PointTrackerComponent {
                     ${p2}
                   </button>
                 </div>
+              </div>
+
+              <!-- Serve (1st In vs 2nd) -->
+              <div>
+                <label class="block text-slate-400 font-semibold mb-1">Serve Attempt</label>
+                <select id="edit-serve-select" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white font-semibold">
+                  <option value="1st" ${serveVal === '1st' ? 'selected' : ''}>1st Serve In</option>
+                  <option value="2nd" ${serveVal === '2nd' ? 'selected' : ''}>2nd Serve</option>
+                </select>
               </div>
 
               <!-- Outcome Selection -->
@@ -566,6 +653,18 @@ export class PointTrackerComponent {
                   <option value="1-4" ${pt.rallyLength === '1-4' ? 'selected' : ''}>1–4 Shots (First Strike)</option>
                   <option value="5-8" ${pt.rallyLength === '5-8' ? 'selected' : ''}>5–8 Shots (Medium)</option>
                   <option value="9+" ${pt.rallyLength === '9+' ? 'selected' : ''}>9+ Shots (Long Rally)</option>
+                </select>
+              </div>
+
+              <!-- Miss Location for UE -->
+              <div>
+                <label class="block text-slate-400 font-semibold mb-1">Miss Location (For Unforced Errors)</label>
+                <select id="edit-error-location-select" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white">
+                  <option value="">None / Unspecified</option>
+                  <option value="net" ${errorLocVal === 'net' ? 'selected' : ''}>🕸️ Net</option>
+                  <option value="wide_left" ${errorLocVal === 'wide_left' ? 'selected' : ''}>⬅️ Wide Left</option>
+                  <option value="wide_right" ${errorLocVal === 'wide_right' ? 'selected' : ''}>➡️ Wide Right</option>
+                  <option value="long" ${errorLocVal === 'long' ? 'selected' : ''}>⬆️ Long Out</option>
                 </select>
               </div>
 
@@ -644,14 +743,18 @@ export class PointTrackerComponent {
                 }
 
                 const ptNum = pt.trackedIndex || (pt.index + 1);
+                const is2nd = pt.serve === '2nd' || pt.outcome === 'double_fault';
+
                 return `
                   <div data-edit-point-id="${pt.id}" class="btn-edit-recent p-2 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 cursor-pointer flex items-center justify-between">
                     <div>
-                      <div class="font-bold text-white flex items-center gap-1.5">
+                      <div class="font-bold text-white flex items-center gap-1.5 flex-wrap">
                         <span class="text-slate-400">#${ptNum}</span>
                         <span class="${pt.winnerPlayer === 'P1' ? 'text-emerald-400' : 'text-indigo-400'}">${pt.winnerPlayer === 'P1' ? config.p1Name : config.p2Name}</span>
                         <span>${this.formatOutcomeShort(pt.outcome)}</span>
                         ${pt.shotType ? `<span class="text-[10px] text-slate-400">(${pt.shotType})</span>` : ''}
+                        <span class="text-[9px] px-1 py-0.2 rounded font-mono ${is2nd ? 'text-amber-400 bg-amber-950/60' : 'text-emerald-400 bg-emerald-950/60'}">${is2nd ? '2nd' : '1st'}</span>
+                        ${pt.errorLocation ? `<span class="text-[9px] text-rose-300 bg-rose-950/60 px-1 rounded">${this.formatLocation(pt.errorLocation)}</span>` : ''}
                       </div>
                       ${pt.comment ? `<div class="text-[10px] text-amber-300 italic">"${pt.comment}"</div>` : ''}
                     </div>
@@ -675,6 +778,7 @@ export class PointTrackerComponent {
       const p1Child = this.engine.config.p1Child;
       const p2Child = this.engine.config.p2Child;
       const curServer = this.engine.state.currentGame.server;
+      const hasNotes = Boolean(this.engine.config.notes && this.engine.config.notes.trim());
 
       return `
         <div class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -730,8 +834,13 @@ export class PointTrackerComponent {
               </div>
             </div>
 
-            <!-- 3. SCORE JUMP & QUICK ACTIONS -->
+            <!-- 3. MATCH NOTES & QUICK ACTIONS -->
             <div class="space-y-2">
+              <button id="btn-modal-open-match-notes" class="w-full py-2.5 px-3 rounded-xl bg-amber-950/50 border border-amber-700 text-left flex items-center justify-between text-xs font-bold text-amber-200 active:scale-95">
+                <span>📝 Edit Overall Match Notes & Comments</span>
+                <span class="text-[10px] ${hasNotes ? 'text-emerald-400' : 'text-slate-400'}">${hasNotes ? 'Has Notes ✓' : 'Add →'}</span>
+              </button>
+
               <button id="btn-open-jump-score" class="w-full py-2.5 px-3 rounded-xl bg-indigo-950/60 border border-indigo-700 text-left flex items-center justify-between text-xs font-bold text-indigo-200 active:scale-95">
                 <span>⏩ Set / Jump Exact Match Score (Mid-match Join)</span>
                 <span>→</span>
@@ -905,6 +1014,33 @@ export class PointTrackerComponent {
     const btnFinalStats = this.container.querySelector('#btn-view-final-stats');
     if (btnFinalStats) btnFinalStats.onclick = () => this.onNavigate('analytics');
 
+    const btnOpenNotes = this.container.querySelector('#btn-open-match-notes');
+    if (btnOpenNotes) {
+      btnOpenNotes.onclick = () => {
+        this.activeModal = 'match_notes';
+        this.render();
+      };
+    }
+
+    const btnModalOpenNotes = this.container.querySelector('#btn-modal-open-match-notes');
+    if (btnModalOpenNotes) {
+      btnModalOpenNotes.onclick = () => {
+        this.activeModal = 'match_notes';
+        this.render();
+      };
+    }
+
+    const btnSaveMatchNotes = this.container.querySelector('#btn-save-match-notes');
+    if (btnSaveMatchNotes) {
+      btnSaveMatchNotes.onclick = () => {
+        const txt = this.container.querySelector('#input-match-notes-text')?.value || '';
+        this.engine.updateMatchNotes(txt);
+        this.activeModal = null;
+        this.onStateChange();
+        this.render();
+      };
+    }
+
     const btnViewAll = this.container.querySelector('#btn-view-all-points');
     if (btnViewAll) {
       btnViewAll.onclick = () => {
@@ -939,6 +1075,15 @@ export class PointTrackerComponent {
       };
     }
 
+    // Serve Selector (1st Serve In vs 2nd Serve)
+    this.container.querySelectorAll('.btn-select-serve').forEach(btn => {
+      btn.onclick = () => {
+        const s = btn.getAttribute('data-serve');
+        this.draft.serve = s;
+        this.render();
+      };
+    });
+
     // 2. Step 1: Event Player
     this.container.querySelectorAll('.btn-select-player').forEach(btn => {
       btn.onclick = () => {
@@ -958,6 +1103,11 @@ export class PointTrackerComponent {
         this.draft.outcome = out;
         const evP = this.draft.eventPlayer;
         const oppP = evP === 'P1' ? 'P2' : 'P1';
+
+        // Auto set 2nd serve on double fault
+        if (out === 'double_fault') {
+          this.draft.serve = '2nd';
+        }
 
         // Deterministic winner mapping:
         // - Winner, Ace, Service Winner -> eventPlayer wins point
@@ -992,6 +1142,14 @@ export class PointTrackerComponent {
     this.container.querySelectorAll('.btn-select-rally').forEach(btn => {
       btn.onclick = () => {
         this.draft.rallyLength = btn.getAttribute('data-rally');
+        this.render();
+      };
+    });
+
+    // Unforced Error Miss Location
+    this.container.querySelectorAll('.btn-select-location').forEach(btn => {
+      btn.onclick = () => {
+        this.draft.errorLocation = btn.getAttribute('data-location');
         this.render();
       };
     });
@@ -1128,9 +1286,11 @@ export class PointTrackerComponent {
         const eventPlayer = this.editingDraft?.eventPlayer || pt.eventPlayer || 'P1';
         const outcome = this.container.querySelector('#edit-outcome-select').value;
         const calculatedWinner = (outcome === 'winner' || outcome === 'ace' || outcome === 'service_winner') ? eventPlayer : (eventPlayer === 'P1' ? 'P2' : 'P1');
+        const serve = this.container.querySelector('#edit-serve-select')?.value || '1st';
         const shotType = this.container.querySelector('#edit-shot-select').value;
         const courtPosition = this.container.querySelector('#edit-pos-select').value;
         const rallyLength = this.container.querySelector('#edit-rally-select').value;
+        const errorLocation = this.container.querySelector('#edit-error-location-select')?.value || undefined;
         const errorCause = this.container.querySelector('#edit-cause-select').value || undefined;
         const comment = this.container.querySelector('#edit-comment-input').value.trim();
 
@@ -1138,9 +1298,11 @@ export class PointTrackerComponent {
           eventPlayer,
           winnerPlayer: calculatedWinner,
           outcome,
+          serve,
           shotType,
           courtPosition,
           rallyLength,
+          errorLocation,
           errorCause,
           comment,
         });
@@ -1358,6 +1520,16 @@ export class PointTrackerComponent {
       'short_angle': 'Short Angle Pull',
     };
     return map[cause] || cause;
+  }
+
+  formatLocation(loc) {
+    const map = {
+      'net': 'Net',
+      'wide_left': 'Wide Left',
+      'wide_right': 'Wide Right',
+      'long': 'Long Out',
+    };
+    return map[loc] || loc || '';
   }
 
   formatNetApproach(approach) {

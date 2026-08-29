@@ -20,9 +20,11 @@ export class AnalyticsViewComponent {
       searchComment: '',
       player: 'all',
       outcome: 'all',
+      serve: 'all',
       shotType: 'all',
       courtPosition: 'all',
       rallyLength: 'all',
+      errorLocation: 'all',
       errorCause: 'all',
     };
   }
@@ -109,6 +111,18 @@ export class AnalyticsViewComponent {
             </div>
           </div>
 
+          <!-- OVERALL MATCH NOTES CARD -->
+          ${config.notes && config.notes.trim() ? `
+            <section class="bg-slate-900 rounded-2xl p-3 border border-amber-800/40 space-y-1.5 shadow-md">
+              <div class="flex items-center justify-between text-xs font-bold text-amber-300">
+                <span class="flex items-center gap-1.5">📝 Overall Match Notes & Comments</span>
+              </div>
+              <div class="text-xs text-slate-200 bg-slate-950/80 p-2.5 rounded-xl border border-slate-800 whitespace-pre-wrap leading-relaxed">
+                ${config.notes}
+              </div>
+            </section>
+          ` : ''}
+
           <!-- KEY PERFORMANCE INDICATORS (Junior Development Focused) -->
           <section class="space-y-2">
             <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Key Performance Indicators</h3>
@@ -142,17 +156,50 @@ export class AnalyticsViewComponent {
               Match Metrics Comparison
             </h3>
 
-            ${this.renderStatRow('Serve Points Won %', `${p1.servePointsWonPct}% (${p1.servePointsWon}/${p1.servePointsTotal})`, `${p2.servePointsWonPct}% (${p2.servePointsWon}/${p2.servePointsTotal})`, p1.servePointsWonPct > p2.servePointsWonPct)}
+            ${this.renderStatRow('1st Serve In %', `${p1.firstServePct}% (${p1.firstServesIn}/${p1.servePointsTotal})`, `${p2.firstServePct}% (${p2.firstServesIn}/${p2.servePointsTotal})`, p1.firstServePct > p2.firstServePct)}
+            ${this.renderStatRow('1st Serve Won %', `${p1.firstServeWonPct}% (${p1.firstServePointsWon}/${p1.firstServesIn})`, `${p2.firstServeWonPct}% (${p2.firstServePointsWon}/${p2.firstServesIn})`, p1.firstServeWonPct > p2.firstServeWonPct)}
+            ${this.renderStatRow('2nd Serve Won %', `${p1.secondServeWonPct}% (${p1.secondServePointsWon}/${p1.secondServesTotal})`, `${p2.secondServeWonPct}% (${p2.secondServePointsWon}/${p2.secondServesTotal})`, p1.secondServeWonPct > p2.secondServeWonPct)}
+            ${this.renderStatRow('Total Serve Points Won %', `${p1.servePointsWonPct}% (${p1.servePointsWon}/${p1.servePointsTotal})`, `${p2.servePointsWonPct}% (${p2.servePointsWon}/${p2.servePointsTotal})`, p1.servePointsWonPct > p2.servePointsWonPct)}
             ${this.renderStatRow('Aces / Service Winners', `${p1.aces} / ${p1.serviceWinners}`, `${p2.aces} / ${p2.serviceWinners}`, p1.aces + p1.serviceWinners > p2.aces + p2.serviceWinners)}
             ${this.renderStatRow('Double Faults', p1.doubleFaults, p2.doubleFaults, p1.doubleFaults < p2.doubleFaults)}
             ${this.renderStatRow('Break Points Saved', `${p1.breakPointsSaved}/${p1.breakPointsFaced} (${p1.breakPointsSavedPct}%)`, `${p2.breakPointsSaved}/${p2.breakPointsFaced} (${p2.breakPointsSavedPct}%)`)}
             ${this.renderStatRow('Return Points Won %', `${p1.returnPointsWonPct}% (${p1.returnPointsWon}/${p1.returnPointsTotal})`, `${p2.returnPointsWonPct}% (${p2.returnPointsWon}/${p2.returnPointsTotal})`, p1.returnPointsWonPct > p2.returnPointsWonPct)}
+            ${this.renderStatRow('1st Serve Return Won %', `${p1.firstServeReturnWonPct}% (${p1.firstServeReturnPointsWon}/${p2.firstServesIn})`, `${p2.firstServeReturnWonPct}% (${p2.firstServeReturnPointsWon}/${p1.firstServesIn})`, p1.firstServeReturnWonPct > p2.firstServeReturnWonPct)}
+            ${this.renderStatRow('2nd Serve Return Won %', `${p1.secondServeReturnWonPct}% (${p1.secondServeReturnPointsWon}/${p2.secondServesTotal})`, `${p2.secondServeReturnWonPct}% (${p2.secondServeReturnPointsWon}/${p1.secondServesTotal})`, p1.secondServeReturnWonPct > p2.secondServeReturnWonPct)}
             ${this.renderStatRow('Break Points Converted', `${p1.breakPointsConverted}/${p1.breakPointsOpportunities} (${p1.breakPointsConvertedPct}%)`, `${p2.breakPointsConverted}/${p2.breakPointsOpportunities} (${p2.breakPointsConvertedPct}%)`)}
             ${this.renderStatRow('Winners (Total)', p1.winnersTotal, p2.winnersTotal, p1.winnersTotal > p2.winnersTotal)}
             ${this.renderStatRow('Unforced Errors', p1.unforcedErrorsTotal, p2.unforcedErrorsTotal, p1.unforcedErrorsTotal < p2.unforcedErrorsTotal)}
             ${this.renderStatRow('Forced Errors Induced', p1.forcedErrorsInduced, p2.forcedErrorsInduced, p1.forcedErrorsInduced > p2.forcedErrorsInduced)}
             ${this.renderStatRow('Winner / UE Ratio', p1.winnerToUERatio, p2.winnerToUERatio, p1.winnerToUERatio > p2.winnerToUERatio)}
             ${this.renderStatRow('Net Points Won', `${p1.netPointsWon}/${p1.netApproaches} (${p1.netEfficiencyPct}%)`, `${p2.netPointsWon}/${p2.netApproaches} (${p2.netEfficiencyPct}%)`, p1.netEfficiencyPct > p2.netEfficiencyPct)}
+          </section>
+
+          <!-- UNFORCED ERROR MISS LOCATIONS (Net, Wide Left, Wide Right, Long Out) -->
+          <section class="bg-slate-900 rounded-2xl p-3 border border-slate-800 space-y-2.5">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 pb-1 border-b border-slate-800 flex justify-between items-center">
+              <span>Unforced Error Miss Locations</span>
+              <span class="text-[10px] text-rose-400 font-semibold">Net vs Wide vs Long</span>
+            </h3>
+
+            <div class="grid grid-cols-2 gap-2">
+              <!-- Player 1 Misses -->
+              <div class="p-2.5 bg-slate-950 rounded-xl border border-slate-800 text-xs space-y-1.5">
+                <div class="font-bold text-emerald-400 mb-1 truncate">${config.p1Name} (${p1.unforcedErrorsTotal} UEs)</div>
+                <div class="flex justify-between"><span>🕸️ Net:</span> <strong class="text-slate-200">${p1.unforcedErrorsByLocation.net} (${p1.unforcedErrorsTotal > 0 ? Math.round((p1.unforcedErrorsByLocation.net / p1.unforcedErrorsTotal) * 100) : 0}%)</strong></div>
+                <div class="flex justify-between"><span>⬅️ Wide Left:</span> <strong class="text-slate-200">${p1.unforcedErrorsByLocation.wide_left} (${p1.unforcedErrorsTotal > 0 ? Math.round((p1.unforcedErrorsByLocation.wide_left / p1.unforcedErrorsTotal) * 100) : 0}%)</strong></div>
+                <div class="flex justify-between"><span>➡️ Wide Right:</span> <strong class="text-slate-200">${p1.unforcedErrorsByLocation.wide_right} (${p1.unforcedErrorsTotal > 0 ? Math.round((p1.unforcedErrorsByLocation.wide_right / p1.unforcedErrorsTotal) * 100) : 0}%)</strong></div>
+                <div class="flex justify-between"><span>⬆️ Long Out:</span> <strong class="text-slate-200">${p1.unforcedErrorsByLocation.long} (${p1.unforcedErrorsTotal > 0 ? Math.round((p1.unforcedErrorsByLocation.long / p1.unforcedErrorsTotal) * 100) : 0}%)</strong></div>
+              </div>
+
+              <!-- Player 2 Misses -->
+              <div class="p-2.5 bg-slate-950 rounded-xl border border-slate-800 text-xs space-y-1.5">
+                <div class="font-bold text-indigo-400 mb-1 truncate">${config.p2Name} (${p2.unforcedErrorsTotal} UEs)</div>
+                <div class="flex justify-between"><span>🕸️ Net:</span> <strong class="text-slate-200">${p2.unforcedErrorsByLocation.net} (${p2.unforcedErrorsTotal > 0 ? Math.round((p2.unforcedErrorsByLocation.net / p2.unforcedErrorsTotal) * 100) : 0}%)</strong></div>
+                <div class="flex justify-between"><span>⬅️ Wide Left:</span> <strong class="text-slate-200">${p2.unforcedErrorsByLocation.wide_left} (${p2.unforcedErrorsTotal > 0 ? Math.round((p2.unforcedErrorsByLocation.wide_left / p2.unforcedErrorsTotal) * 100) : 0}%)</strong></div>
+                <div class="flex justify-between"><span>➡️ Wide Right:</span> <strong class="text-slate-200">${p2.unforcedErrorsByLocation.wide_right} (${p2.unforcedErrorsTotal > 0 ? Math.round((p2.unforcedErrorsByLocation.wide_right / p2.unforcedErrorsTotal) * 100) : 0}%)</strong></div>
+                <div class="flex justify-between"><span>⬆️ Long Out:</span> <strong class="text-slate-200">${p2.unforcedErrorsByLocation.long} (${p2.unforcedErrorsTotal > 0 ? Math.round((p2.unforcedErrorsByLocation.long / p2.unforcedErrorsTotal) * 100) : 0}%)</strong></div>
+              </div>
+            </div>
           </section>
 
           <!-- RALLY LENGTH ANALYSIS (1-4, 5-8, 9+) -->
@@ -229,7 +276,7 @@ export class AnalyticsViewComponent {
             </div>
 
             <!-- MULTI-CRITERIA AND FILTERS -->
-            <div class="grid grid-cols-2 sm:grid-cols-3 gap-1.5 text-xs bg-slate-950/80 p-2.5 rounded-xl border border-slate-800">
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-xs bg-slate-950/80 p-2.5 rounded-xl border border-slate-800">
               <!-- Event Player Filter (Who hit the shot / made error) -->
               <div>
                 <label class="block text-[10px] text-slate-400 font-semibold mb-0.5">Event Player (Hitter/Error)</label>
@@ -237,6 +284,16 @@ export class AnalyticsViewComponent {
                   <option value="all">All Event Players</option>
                   <option value="P1" ${this.activeFilter.player === 'P1' ? 'selected' : ''}>${config.p1Name}</option>
                   <option value="P2" ${this.activeFilter.player === 'P2' ? 'selected' : ''}>${config.p2Name}</option>
+                </select>
+              </div>
+
+              <!-- Serve Filter (1st In vs 2nd) -->
+              <div>
+                <label class="block text-[10px] text-slate-400 font-semibold mb-0.5">Serve Attempt</label>
+                <select id="filter-serve" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-[11px] text-white">
+                  <option value="all">All Serves</option>
+                  <option value="1st" ${this.activeFilter.serve === '1st' ? 'selected' : ''}>1st Serve In</option>
+                  <option value="2nd" ${this.activeFilter.serve === '2nd' ? 'selected' : ''}>2nd Serve</option>
                 </select>
               </div>
 
@@ -289,6 +346,18 @@ export class AnalyticsViewComponent {
                   <option value="1-4" ${this.activeFilter.rallyLength === '1-4' ? 'selected' : ''}>1–4 (Short)</option>
                   <option value="5-8" ${this.activeFilter.rallyLength === '5-8' ? 'selected' : ''}>5–8 (Medium)</option>
                   <option value="9+" ${this.activeFilter.rallyLength === '9+' ? 'selected' : ''}>9+ (Long)</option>
+                </select>
+              </div>
+
+              <!-- Miss Location Filter -->
+              <div>
+                <label class="block text-[10px] text-slate-400 font-semibold mb-0.5">Miss Location</label>
+                <select id="filter-location" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-[11px] text-white">
+                  <option value="all">All Misses</option>
+                  <option value="net" ${this.activeFilter.errorLocation === 'net' ? 'selected' : ''}>🕸️ Net</option>
+                  <option value="wide_left" ${this.activeFilter.errorLocation === 'wide_left' ? 'selected' : ''}>⬅️ Wide Left</option>
+                  <option value="wide_right" ${this.activeFilter.errorLocation === 'wide_right' ? 'selected' : ''}>➡️ Wide Right</option>
+                  <option value="long" ${this.activeFilter.errorLocation === 'long' ? 'selected' : ''}>⬆️ Long Out</option>
                 </select>
               </div>
 
@@ -354,6 +423,13 @@ export class AnalyticsViewComponent {
         if (eventPlayer !== f.player) return false;
       }
 
+      // Serve Filter
+      if (f.serve !== 'all') {
+        const is2nd = (pt.serve === '2nd' || pt.outcome === 'double_fault');
+        if (f.serve === '1st' && is2nd) return false;
+        if (f.serve === '2nd' && !is2nd) return false;
+      }
+
       // 3. Outcome filter
       if (f.outcome !== 'all' && pt.outcome !== f.outcome) return false;
 
@@ -366,6 +442,9 @@ export class AnalyticsViewComponent {
       // 6. Rally Length filter
       if (f.rallyLength !== 'all' && pt.rallyLength !== f.rallyLength) return false;
 
+      // Miss Location Filter
+      if (f.errorLocation !== 'all' && pt.errorLocation !== f.errorLocation) return false;
+
       // 7. Error Cause filter
       if (f.errorCause !== 'all' && pt.errorCause !== f.errorCause) return false;
 
@@ -375,7 +454,8 @@ export class AnalyticsViewComponent {
         const matchesOutcome = pt.outcome && pt.outcome.toLowerCase().includes(filterText);
         const matchesShot = pt.shotType && pt.shotType.toLowerCase().includes(filterText);
         const matchesCause = pt.errorCause && pt.errorCause.toLowerCase().includes(filterText);
-        if (!matchesComment && !matchesOutcome && !matchesShot && !matchesCause) return false;
+        const matchesLoc = pt.errorLocation && pt.errorLocation.toLowerCase().includes(filterText);
+        if (!matchesComment && !matchesOutcome && !matchesShot && !matchesCause && !matchesLoc) return false;
       }
 
       return true;
@@ -412,24 +492,27 @@ export class AnalyticsViewComponent {
       const winnerName = pt.winnerPlayer === 'P1' ? config.p1Name : config.p2Name;
       const isP1 = pt.winnerPlayer === 'P1';
       const ptNum = pt.trackedIndex || (pt.index + 1);
+      const is2nd = (pt.serve === '2nd' || pt.outcome === 'double_fault');
 
       return `
         <div class="p-2 rounded-xl bg-slate-950 border border-slate-800/80 text-xs space-y-1">
           <div class="flex items-center justify-between">
-            <div class="flex items-center gap-1.5 font-bold">
+            <div class="flex items-center gap-1.5 font-bold flex-wrap">
               <span class="text-[10px] font-mono text-slate-400">Pt #${ptNum}</span>
               <span class="${isP1 ? 'text-emerald-400' : 'text-indigo-400'}">${winnerName}</span>
               <span class="text-slate-300">${this.formatOutcomeFull(pt.outcome)}</span>
+              <span class="text-[9px] px-1 py-0.2 rounded font-mono ${is2nd ? 'text-amber-400 bg-amber-950/60 border border-amber-800' : 'text-emerald-400 bg-emerald-950/60 border border-emerald-800'}">${is2nd ? '2nd' : '1st In'}</span>
             </div>
-            <div class="text-[10px] font-mono text-slate-400">
+            <div class="text-[10px] font-mono text-slate-400 shrink-0">
               S${(pt.setIndex || 0) + 1} G${(pt.gameIndex || 0) + 1}
             </div>
           </div>
 
-          <div class="flex items-center gap-2 text-[10px] text-slate-400 flex-wrap">
+          <div class="flex items-center gap-1.5 text-[10px] text-slate-400 flex-wrap">
             ${pt.shotType ? `<span class="bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800 font-semibold text-slate-300 capitalize">${pt.shotType}</span>` : ''}
             ${pt.courtPosition ? `<span class="bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800">${this.formatPositionName(pt.courtPosition)}</span>` : ''}
             ${pt.rallyLength ? `<span class="bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800">Rally: ${pt.rallyLength}</span>` : ''}
+            ${pt.errorLocation ? `<span class="bg-rose-950/60 text-rose-300 px-1.5 py-0.5 rounded border border-rose-800/60">${TennisStats.formatLocation(pt.errorLocation)}</span>` : ''}
             ${pt.errorCause ? `<span class="bg-amber-950/60 text-amber-300 px-1.5 py-0.5 rounded border border-amber-800/60">${TennisStats.formatCause(pt.errorCause)}</span>` : ''}
           </div>
 
@@ -496,6 +579,9 @@ export class AnalyticsViewComponent {
     const selPlayer = this.container.querySelector('#filter-player');
     if (selPlayer) selPlayer.onchange = (e) => { this.activeFilter.player = e.target.value; updateFilteredLog(); };
 
+    const selServe = this.container.querySelector('#filter-serve');
+    if (selServe) selServe.onchange = (e) => { this.activeFilter.serve = e.target.value; updateFilteredLog(); };
+
     const selOutcome = this.container.querySelector('#filter-outcome');
     if (selOutcome) selOutcome.onchange = (e) => { this.activeFilter.outcome = e.target.value; updateFilteredLog(); };
 
@@ -508,6 +594,9 @@ export class AnalyticsViewComponent {
     const selRally = this.container.querySelector('#filter-rally');
     if (selRally) selRally.onchange = (e) => { this.activeFilter.rallyLength = e.target.value; updateFilteredLog(); };
 
+    const selLoc = this.container.querySelector('#filter-location');
+    if (selLoc) selLoc.onchange = (e) => { this.activeFilter.errorLocation = e.target.value; updateFilteredLog(); };
+
     const selCause = this.container.querySelector('#filter-cause');
     if (selCause) selCause.onchange = (e) => { this.activeFilter.errorCause = e.target.value; updateFilteredLog(); };
 
@@ -518,10 +607,12 @@ export class AnalyticsViewComponent {
     if (btnReset) {
       btnReset.onclick = () => {
         this.activeFilter.player = 'all';
+        this.activeFilter.serve = 'all';
         this.activeFilter.outcome = 'all';
         this.activeFilter.shotType = 'all';
         this.activeFilter.courtPosition = 'all';
         this.activeFilter.rallyLength = 'all';
+        this.activeFilter.errorLocation = 'all';
         this.activeFilter.errorCause = 'all';
         this.activeFilter.searchComment = '';
         this.render();

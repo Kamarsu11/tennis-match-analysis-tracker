@@ -844,6 +844,13 @@ export class TennisEngine {
   }
 
   /**
+   * Updates overarching match notes mid-match
+   */
+  updateMatchNotes(notes) {
+    this.config.notes = (notes !== undefined && notes !== null) ? String(notes).trim() : '';
+  }
+
+  /**
    * Switches or explicitly sets the active server for the current game
    */
   switchServer(targetServer) {

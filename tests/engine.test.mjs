@@ -1,5 +1,6 @@
 import { TennisEngine, FORMAT_PRESETS } from '../js/engine/TennisEngine.js';
 import { TennisStats } from '../js/engine/TennisStats.js';
+import { TennisStorage } from '../js/db/storage.js';
 
 function assert(cond, msg) {
   if (!cond) {
@@ -283,6 +284,81 @@ console.log('🧪 Starting TennisEngine & Stats Automated Test Suite...');
   const stats = TennisStats.calculate(engine.points, engine.config);
   assert(stats.totalPoints === 4, 'All 4 points calculated');
   console.log('✅ Test 8 Passed: Updated Diagnostic Error Causes');
+}
+
+// Test 9: 1st & 2nd Serve In Tracking & Return Stats
+{
+  const engine = new TennisEngine({
+    ...FORMAT_PRESETS.STANDARD_BEST_OF_3,
+    p1Name: 'Player 1',
+    p2Name: 'Player 2',
+    firstServer: 'P1',
+  });
+
+  // Point 1: P1 serves 1st serve in and hits ace
+  engine.addPoint({ winnerPlayer: 'P1', outcome: 'ace', serve: '1st' });
+  // Point 2: P1 misses 1st serve, 2nd serve in, P1 wins rally
+  engine.addPoint({ winnerPlayer: 'P1', outcome: 'winner', shotType: 'forehand', serve: '2nd' });
+  // Point 3: P1 double faults
+  engine.addPoint({ winnerPlayer: 'P2', outcome: 'double_fault', serve: '2nd' });
+  // Point 4: P1 serves 1st serve in, P2 wins point
+  engine.addPoint({ winnerPlayer: 'P2', outcome: 'winner', shotType: 'forehand', serve: '1st' });
+
+  const stats = TennisStats.calculate(engine.points, engine.config);
+  assert(stats.P1.servePointsTotal === 4, 'P1 served 4 points');
+  assert(stats.P1.firstServesIn === 2, 'P1 made 2 first serves in');
+  assert(stats.P1.firstServePct === 50, 'P1 1st serve in % is 50%');
+  assert(stats.P1.firstServePointsWon === 1, 'P1 won 1 point on 1st serve');
+  assert(stats.P1.firstServeWonPct === 50, 'P1 1st serve won % is 50%');
+  assert(stats.P1.secondServesTotal === 2, 'P1 played 2 second serve points');
+  assert(stats.P1.secondServePointsWon === 1, 'P1 won 1 point on 2nd serve');
+  assert(stats.P1.secondServeWonPct === 50, 'P1 2nd serve won % is 50%');
+  assert(stats.P1.doubleFaults === 1, 'P1 committed 1 double fault');
+
+  // P2 return stats against P1
+  assert(stats.P2.firstServeReturnPointsWon === 1, 'P2 won 1 point returning 1st serve');
+  assert(stats.P2.secondServeReturnPointsWon === 1, 'P2 won 1 point returning 2nd serve (including DF)');
+
+  console.log('✅ Test 9 Passed: 1st & 2nd Serve In Tracking & Return Stats');
+}
+
+// Test 10: Unforced Error Miss Locations & Overall Match Notes
+{
+  const engine = new TennisEngine({
+    ...FORMAT_PRESETS.STANDARD_BEST_OF_3,
+    p1Name: 'Leo',
+    p2Name: 'Max',
+    notes: 'Initial match strategy notes',
+  });
+
+  // Add UEs with different miss locations
+  engine.addPoint({ winnerPlayer: 'P2', outcome: 'unforced_error', shotType: 'forehand', errorLocation: 'net', errorCause: 'spacing' });
+  engine.addPoint({ winnerPlayer: 'P2', outcome: 'unforced_error', shotType: 'backhand', errorLocation: 'wide_left', errorCause: 'mindset' });
+  engine.addPoint({ winnerPlayer: 'P2', outcome: 'unforced_error', shotType: 'forehand', errorLocation: 'wide_right', errorCause: 'let_ball' });
+  engine.addPoint({ winnerPlayer: 'P2', outcome: 'unforced_error', shotType: 'forehand', errorLocation: 'long', errorCause: 'above_shoulder' });
+
+  const stats = TennisStats.calculate(engine.points, engine.config);
+  assert(stats.P1.unforcedErrorsByLocation.net === 1, 'P1 had 1 Net miss');
+  assert(stats.P1.unforcedErrorsByLocation.wide_left === 1, 'P1 had 1 Wide Left miss');
+  assert(stats.P1.unforcedErrorsByLocation.wide_right === 1, 'P1 had 1 Wide Right miss');
+  assert(stats.P1.unforcedErrorsByLocation.long === 1, 'P1 had 1 Long miss');
+
+  // Mid-match notes editing
+  engine.updateMatchNotes('Opponent struggling with high balls. Great spacing today.');
+  assert(engine.config.notes.includes('Opponent struggling'), 'Match notes updated');
+
+  // CSV Generation with notes and miss location
+  const csv = TennisStorage.generateMatchCSV({
+    config: engine.config,
+    points: engine.points,
+  });
+  assert(csv.includes('Error Miss Location'), 'CSV contains Error Miss Location column');
+  assert(csv.includes('Serve Attempt'), 'CSV contains Serve Attempt column');
+  assert(csv.includes('Match Notes'), 'CSV contains Match Notes column');
+  assert(csv.includes('wide_left'), 'CSV contains specific error location');
+  assert(csv.includes('Opponent struggling'), 'CSV contains match notes');
+
+  console.log('✅ Test 10 Passed: Unforced Error Miss Locations & Overall Match Notes');
 }
 
 console.log('🎉 ALL ENGINE & STATS TESTS PASSED PERFECTLY!');
