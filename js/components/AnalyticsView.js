@@ -483,25 +483,23 @@ export class AnalyticsViewComponent {
               <!-- Momentum Curve Line -->
               <path d="${pathD}" fill="none" stroke="#38bdf8" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
 
-              <!-- Individual Data Circles (Clean Two-Player Colors) -->
+              <!-- Active Highlight Ring (Zero-Jitter Smooth Halo) -->
+              <circle id="wave-active-halo" cx="0" cy="0" r="10" fill="none" stroke="#38bdf8" stroke-width="2.5" class="pointer-events-none" style="display: none;" />
+
+              <!-- Individual Data Point / Game Groups with Generous Hit-Targets (Zero Flicker) -->
               ${coords.map(c => {
                 if (c.isGame) {
                   const isP1Won = c.g.winner === 'P1';
                   const fillColor = isP1Won ? '#10b981' : '#6366f1';
                   const srvName = c.g.server === 'P1' ? config.p1Name : config.p2Name;
-                  const gWinnerName = isP1Won ? config.p1Name : config.p2Name;
                   const scoreDesc = `Set ${c.g.setNumber} Game ${c.g.gameIndex + 1} (${c.g.p1ScoreBefore}-${c.g.p2ScoreBefore} ➔ ${c.g.p1GamesAfter}-${c.g.p2GamesAfter})`;
 
                   return `
-                    <circle 
-                      cx="${c.x.toFixed(1)}" 
-                      cy="${c.y.toFixed(1)}" 
-                      r="5.5" 
-                      fill="${fillColor}" 
-                      stroke="#ffffff" 
-                      stroke-width="1.5"
-                      class="cursor-pointer hover:scale-150 transition-transform momentum-wave-dot"
+                    <g 
+                      class="momentum-wave-dot cursor-pointer"
                       data-type="game"
+                      data-cx="${c.x.toFixed(1)}"
+                      data-cy="${c.y.toFixed(1)}"
                       data-game-num="${c.g.gameNumber}"
                       data-winner="${c.g.winner}"
                       data-val="${c.momentumVal}"
@@ -513,31 +511,36 @@ export class AnalyticsViewComponent {
                       data-p1-ue="${c.g.p1UEs}"
                       data-p2-ue="${c.g.p2UEs}"
                       data-srv="${srvName}"
-                    />
+                    >
+                      <!-- Invisible wide touch area (prevents leaving target during tap/touch) -->
+                      <circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="18" fill="transparent" />
+                      <!-- Stable crisp circle -->
+                      <circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="6" fill="${fillColor}" stroke="#ffffff" stroke-width="1.5" />
+                    </g>
                   `;
                 } else {
                   const isP1Won = c.pt.winner === 'P1';
                   const fillColor = isP1Won ? '#10b981' : '#6366f1';
-                  const pWinnerName = isP1Won ? config.p1Name : config.p2Name;
                   const ptScoreDesc = `S${c.pt.set || 1} G${c.pt.game || 1} [${c.pt.p1Games}-${c.pt.p2Games}] • At ${c.pt.p1Score}-${c.pt.p2Score}`;
 
                   return `
-                    <circle 
-                      cx="${c.x.toFixed(1)}" 
-                      cy="${c.y.toFixed(1)}" 
-                      r="3.5" 
-                      fill="${fillColor}" 
-                      stroke="#0f172a" 
-                      stroke-width="1"
-                      class="cursor-pointer hover:scale-150 transition-transform momentum-wave-dot"
+                    <g 
+                      class="momentum-wave-dot cursor-pointer"
                       data-type="point"
+                      data-cx="${c.x.toFixed(1)}"
+                      data-cy="${c.y.toFixed(1)}"
                       data-pt-idx="${c.pt.index}"
                       data-pt-num="${c.pt.index}"
                       data-winner="${c.pt.winner}"
                       data-val="${c.momentumVal}"
                       data-desc="${ptScoreDesc}"
                       data-outcome="${c.pt.outcome || ''}"
-                    />
+                    >
+                      <!-- Invisible wide touch area (prevents jitter) -->
+                      <circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="14" fill="transparent" />
+                      <!-- Stable crisp dot -->
+                      <circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="3.5" fill="${fillColor}" stroke="#0f172a" stroke-width="1" />
+                    </g>
                   `;
                 }
               }).join('')}
@@ -1390,17 +1393,31 @@ export class AnalyticsViewComponent {
       selEnd.onchange = handleGameSelect;
     }
 
-    // Momentum dot click/hover listener (Both Touch & Mouse Support)
+    // Momentum dot click/hover listener (Both Touch & Mouse Support - 100% Zero Flicker)
     const banner = this.container.querySelector('#momentum-detail-banner');
+    const activeHalo = this.container.querySelector('#wave-active-halo');
+
     this.container.querySelectorAll('.momentum-wave-dot').forEach(dot => {
       const handleDot = (e) => {
-        e.stopPropagation();
+        if (e && e.type === 'touchstart') {
+          // allow scroll if user is dragging, but register inspection on tap
+        }
         const type = dot.getAttribute('data-type');
+        const cx = dot.getAttribute('data-cx');
+        const cy = dot.getAttribute('data-cy');
         const winner = dot.getAttribute('data-winner');
         const val = dot.getAttribute('data-val');
         const desc = dot.getAttribute('data-desc') || '';
         const winnerName = winner === 'P1' ? this.engine.config.p1Name : this.engine.config.p2Name;
         const winnerColor = winner === 'P1' ? 'text-emerald-400' : 'text-indigo-400';
+
+        // Position active halo on top of the hovered/touched point without altering the dot geometry
+        if (activeHalo && cx && cy) {
+          activeHalo.setAttribute('cx', cx);
+          activeHalo.setAttribute('cy', cy);
+          activeHalo.setAttribute('r', type === 'game' ? '12' : '8');
+          activeHalo.style.display = 'inline';
+        }
 
         if (banner) {
           if (type === 'game') {
