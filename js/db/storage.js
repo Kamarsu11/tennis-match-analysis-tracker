@@ -168,6 +168,9 @@ export class TennisStorage {
   /**
    * Convert point records to detailed CSV string
    */
+  /**
+   * Convert point records to detailed CSV string
+   */
   static generateMatchCSV(match) {
     const headers = [
       'Point #',
@@ -179,6 +182,8 @@ export class TennisStorage {
       'Receiver',
       'Serve Attempt',
       'Serving Side',
+      'Is Starred',
+      'Is Pressure Point',
       'Is Break Point',
       'Is Game Point',
       'Is Set Point',
@@ -214,6 +219,8 @@ export class TennisStorage {
           'NO',
           'NO',
           'NO',
+          'NO',
+          'NO',
           '""',
           'SCORE_JUMP',
           '',
@@ -243,6 +250,8 @@ export class TennisStorage {
         `"${receiverName}"`,
         `"${serveAttempt}"`,
         pt.servingSide || '',
+        pt.isStarred ? 'YES' : 'NO',
+        pt.isPressurePoint ? 'YES' : 'NO',
         pt.isBreakPoint ? 'YES' : 'NO',
         pt.isGamePoint ? 'YES' : 'NO',
         pt.isSetPoint ? 'YES' : 'NO',
@@ -290,6 +299,8 @@ export class TennisStorage {
       'Receiver',
       'Serve Attempt',
       'Serving Side',
+      'Is Starred',
+      'Is Pressure Point',
       'Is Break Point',
       'Is Game Point',
       'Is Set Point',
@@ -347,6 +358,8 @@ export class TennisStorage {
           `"${receiverName}"`,
           `"${serveAttempt}"`,
           pt.servingSide || '',
+          pt.isStarred ? 'YES' : 'NO',
+          pt.isPressurePoint ? 'YES' : 'NO',
           pt.isBreakPoint ? 'YES' : 'NO',
           pt.isGamePoint ? 'YES' : 'NO',
           pt.isSetPoint ? 'YES' : 'NO',
@@ -389,32 +402,57 @@ export class TennisStorage {
   }
 
   /**
-   * Restore all database records from JSON
+   * Restore all database records from JSON safely
    */
   static async importFullBackupJSON(jsonString) {
-    const data = JSON.parse(jsonString);
+    let data;
+    try {
+      data = JSON.parse(jsonString);
+    } catch (parseErr) {
+      throw new Error('Selected file is not valid JSON.');
+    }
+
     if (!data || !Array.isArray(data.matches)) {
-      throw new Error('Invalid backup file format.');
+      throw new Error('Invalid backup format: Missing matches array.');
     }
 
     const db = await this.getDB();
-    const tx = db.transaction(['matches', 'players'], 'readwrite');
-    const matchStore = tx.objectStore('matches');
-    const playerStore = tx.objectStore('players');
+    const savedMatches = [];
 
+    // Save matches
     for (const match of data.matches) {
-      matchStore.put(match);
-    }
-
-    if (Array.isArray(data.players)) {
-      for (const player of data.players) {
-        playerStore.put(player);
+      if (match && match.id) {
+        await new Promise((resolve, reject) => {
+          const tx = db.transaction(['matches'], 'readwrite');
+          const store = tx.objectStore('matches');
+          const record = {
+            ...match,
+            updatedAt: match.updatedAt || Date.now(),
+          };
+          const req = store.put(record);
+          req.onsuccess = () => resolve();
+          req.onerror = () => reject(req.error);
+        });
+        savedMatches.push(match);
       }
     }
 
-    return new Promise((resolve, reject) => {
-      tx.oncomplete = () => resolve({ matchesCount: data.matches.length });
-      tx.onerror = () => reject(tx.error);
-    });
+    // Save players safely without key/unique index collisions
+    if (Array.isArray(data.players)) {
+      for (const player of data.players) {
+        if (player && player.name) {
+          try {
+            await this.savePlayer(player);
+          } catch (pErr) {
+            console.warn('Player import notice:', pErr);
+          }
+        }
+      }
+    }
+
+    return {
+      matchesCount: savedMatches.length,
+      matches: savedMatches,
+    };
   }
 }

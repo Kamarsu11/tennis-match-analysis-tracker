@@ -171,6 +171,13 @@ export class TennisEngine {
     const winner = pointData.winnerPlayer; // 'P1' | 'P2'
 
     // Enrich point with context before state transitions
+    const isDeuceBefore = (this.state.currentGame.p1PointsRaw >= 3 && this.state.currentGame.p2PointsRaw >= 3 && this.state.currentGame.p1PointsRaw === this.state.currentGame.p2PointsRaw);
+    const isLateTBBefore = this.state.currentGame.isTiebreak && (
+      (this.state.currentGame.p1PointsRaw >= 4 && this.state.currentGame.p2PointsRaw >= 4) ||
+      (this.state.currentGame.p1PointsRaw >= this.state.currentGame.tiebreakTarget - 2 || this.state.currentGame.p2PointsRaw >= this.state.currentGame.tiebreakTarget - 2)
+    );
+    const isPressure = Boolean(this.state.currentGame.isBreakPoint || this.state.currentGame.isGamePoint || this.state.currentGame.isSetPoint || this.state.currentGame.isMatchPoint || isDeuceBefore || isLateTBBefore);
+
     const enrichedPoint = {
       id: pointData.id || `pt_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
       index: this.points.length,
@@ -192,6 +199,8 @@ export class TennisEngine {
       isGamePoint: this.state.currentGame.isGamePoint,
       isSetPoint: this.state.currentGame.isSetPoint,
       isMatchPoint: this.state.currentGame.isMatchPoint,
+      isPressurePoint: isPressure,
+      isStarred: Boolean(pointData.isStarred),
       ...pointData,
       timestamp: pointData.timestamp || Date.now(),
     };
@@ -209,6 +218,23 @@ export class TennisEngine {
     const removed = this.points.pop();
     this.recalculateStateFromPoints();
     return removed;
+  }
+
+  /**
+   * Toggle star/favorite status on a specific point
+   */
+  togglePointStar(pointIdOrIndex) {
+    let index = -1;
+    if (typeof pointIdOrIndex === 'number') {
+      index = pointIdOrIndex;
+    } else {
+      index = this.points.findIndex(p => p.id === pointIdOrIndex);
+    }
+    if (index >= 0 && index < this.points.length) {
+      this.points[index].isStarred = !this.points[index].isStarred;
+      return this.points[index].isStarred;
+    }
+    return false;
   }
 
   /**
@@ -270,6 +296,18 @@ export class TennisEngine {
           setsP1: this.state.setsWon.P1,
           setsP2: this.state.setsWon.P2,
         };
+
+        pt.isBreakPoint = this.state.currentGame.isBreakPoint;
+        pt.isGamePoint = this.state.currentGame.isGamePoint;
+        pt.isSetPoint = this.state.currentGame.isSetPoint;
+        pt.isMatchPoint = this.state.currentGame.isMatchPoint;
+
+        const isDeuceBefore = (this.state.currentGame.p1PointsRaw >= 3 && this.state.currentGame.p2PointsRaw >= 3 && this.state.currentGame.p1PointsRaw === this.state.currentGame.p2PointsRaw);
+        const isLateTBBefore = this.state.currentGame.isTiebreak && (
+          (this.state.currentGame.p1PointsRaw >= 4 && this.state.currentGame.p2PointsRaw >= 4) ||
+          (this.state.currentGame.p1PointsRaw >= this.state.currentGame.tiebreakTarget - 2 || this.state.currentGame.p2PointsRaw >= this.state.currentGame.tiebreakTarget - 2)
+        );
+        pt.isPressurePoint = Boolean(pt.isBreakPoint || pt.isGamePoint || pt.isSetPoint || pt.isMatchPoint || isDeuceBefore || isLateTBBefore);
 
         this.applyPointTransition(pt);
       }

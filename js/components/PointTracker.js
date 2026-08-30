@@ -202,6 +202,7 @@ export class PointTrackerComponent {
 
       return `
         <button data-edit-point-id="${pt.id}" class="btn-edit-recent px-2 py-0.5 rounded bg-slate-800/90 border border-slate-700/80 text-slate-300 hover:text-white shrink-0 active:scale-95 flex items-center gap-1" title="Click to edit point #${ptNum}">
+          ${pt.isStarred ? '<span class="text-amber-400 font-bold">⭐️</span>' : ''}
           <span>#${ptNum} ${label}</span>
           ${pt.comment ? '<span class="text-amber-400">💬</span>' : ''}
           <span class="text-[9px] text-slate-400">✏️</span>
@@ -471,13 +472,17 @@ export class PointTrackerComponent {
             </section>
           ` : ''}
 
-          <!-- NET APPROACH & COMMENTS BAR -->
+          <!-- NET APPROACH, STAR & COMMENTS BAR -->
           <section class="flex items-center gap-2 pt-1">
-            <button id="btn-toggle-net" class="flex-1 py-2 px-2.5 rounded-lg border text-xs font-medium flex items-center justify-center gap-1.5 transition-all active:scale-95 ${draft.netApproach !== 'none' ? 'bg-teal-900/60 border-teal-500 text-teal-300' : 'bg-slate-900 border-slate-800 text-slate-400'}">
+            <button id="btn-toggle-net" type="button" class="flex-1 py-2 px-2.5 rounded-lg border text-xs font-medium flex items-center justify-center gap-1.5 transition-all active:scale-95 ${draft.netApproach !== 'none' ? 'bg-teal-900/60 border-teal-500 text-teal-300' : 'bg-slate-900 border-slate-800 text-slate-400'}">
               <span>🏸 Net: ${this.formatNetApproach(draft.netApproach)}</span>
             </button>
 
-            <button id="btn-open-comment" class="py-2 px-3 rounded-lg border text-xs font-medium flex items-center gap-1.5 transition-all active:scale-95 ${draft.comment ? 'bg-amber-900/60 border-amber-500 text-amber-300' : 'bg-slate-900 border-slate-800 text-slate-400'}">
+            <button id="btn-toggle-star" type="button" class="py-2 px-3 rounded-lg border text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 ${draft.isStarred ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md shadow-amber-500/20' : 'bg-slate-900 border-slate-800 text-slate-400'}">
+              <span>${draft.isStarred ? '⭐️ Starred' : '☆ Star'}</span>
+            </button>
+
+            <button id="btn-open-comment" type="button" class="py-2 px-3 rounded-lg border text-xs font-medium flex items-center gap-1.5 transition-all active:scale-95 ${draft.comment ? 'bg-amber-900/60 border-amber-500 text-amber-300' : 'bg-slate-900 border-slate-800 text-slate-400'}">
               <span>💬 ${draft.comment ? 'Edit Note' : '+ Note'}</span>
             </button>
           </section>
@@ -573,6 +578,7 @@ export class PointTrackerComponent {
       const eventPlayerName = eventPlayer === 'P1' ? p1 : p2;
       const ptNum = pt.trackedIndex || (this.editingPointIndex + 1);
       const serveVal = this.editingDraft?.serve || pt.serve || (pt.outcome === 'double_fault' ? '2nd' : '1st');
+      const isStarredVal = this.editingDraft?.isStarred !== undefined ? this.editingDraft.isStarred : Boolean(pt.isStarred);
       const errorLocVal = this.editingDraft?.errorLocation !== undefined ? this.editingDraft.errorLocation : (pt.errorLocation || '');
 
       return `
@@ -595,6 +601,13 @@ export class PointTrackerComponent {
                     ${p2}
                   </button>
                 </div>
+              </div>
+
+              <!-- Star / Favorite Toggle -->
+              <div>
+                <button id="btn-edit-toggle-star" type="button" class="w-full py-2 px-3 rounded-lg border text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95 ${isStarredVal ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md' : 'bg-slate-950 border-slate-700 text-slate-300'}">
+                  <span>${isStarredVal ? '⭐️ Marked as Favorite / Key Point' : '☆ Mark as Favorite / Key Point'}</span>
+                </button>
               </div>
 
               <!-- Serve (1st In vs 2nd) -->
@@ -746,9 +759,10 @@ export class PointTrackerComponent {
                 const is2nd = pt.serve === '2nd' || pt.outcome === 'double_fault';
 
                 return `
-                  <div data-edit-point-id="${pt.id}" class="btn-edit-recent p-2 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 cursor-pointer flex items-center justify-between">
+                  <div data-edit-point-id="${pt.id}" class="btn-edit-recent p-2 rounded-xl bg-slate-950 border ${pt.isStarred ? 'border-amber-500/80 bg-amber-950/20' : 'border-slate-800'} hover:border-slate-700 cursor-pointer flex items-center justify-between">
                     <div>
                       <div class="font-bold text-white flex items-center gap-1.5 flex-wrap">
+                        ${pt.isStarred ? '<span class="text-amber-400">⭐️</span>' : ''}
                         <span class="text-slate-400">#${ptNum}</span>
                         <span class="${pt.winnerPlayer === 'P1' ? 'text-emerald-400' : 'text-indigo-400'}">${pt.winnerPlayer === 'P1' ? config.p1Name : config.p2Name}</span>
                         <span>${this.formatOutcomeShort(pt.outcome)}</span>
@@ -1286,6 +1300,7 @@ export class PointTrackerComponent {
         const eventPlayer = this.editingDraft?.eventPlayer || pt.eventPlayer || 'P1';
         const outcome = this.container.querySelector('#edit-outcome-select').value;
         const calculatedWinner = (outcome === 'winner' || outcome === 'ace' || outcome === 'service_winner') ? eventPlayer : (eventPlayer === 'P1' ? 'P2' : 'P1');
+        const isStarred = this.editingDraft?.isStarred !== undefined ? this.editingDraft.isStarred : Boolean(pt.isStarred);
         const serve = this.container.querySelector('#edit-serve-select')?.value || '1st';
         const shotType = this.container.querySelector('#edit-shot-select').value;
         const courtPosition = this.container.querySelector('#edit-pos-select').value;
@@ -1299,6 +1314,7 @@ export class PointTrackerComponent {
           winnerPlayer: calculatedWinner,
           outcome,
           serve,
+          isStarred,
           shotType,
           courtPosition,
           rallyLength,
@@ -1328,6 +1344,26 @@ export class PointTrackerComponent {
           this.onStateChange();
           this.render();
         }
+      };
+    }
+
+    // Star / Favorite Toggle in Entry Flow
+    const btnToggleStar = this.container.querySelector('#btn-toggle-star');
+    if (btnToggleStar) {
+      btnToggleStar.onclick = () => {
+        this.draft.isStarred = !this.draft.isStarred;
+        this.render();
+      };
+    }
+
+    // Star Toggle in Edit Point Modal
+    const btnEditToggleStar = this.container.querySelector('#btn-edit-toggle-star');
+    if (btnEditToggleStar) {
+      btnEditToggleStar.onclick = () => {
+        if (!this.editingDraft) this.editingDraft = {};
+        const cur = this.editingDraft.isStarred !== undefined ? this.editingDraft.isStarred : Boolean(this.engine.points[this.editingPointIndex]?.isStarred);
+        this.editingDraft.isStarred = !cur;
+        this.render();
       };
     }
 

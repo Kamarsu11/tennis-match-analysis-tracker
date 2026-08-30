@@ -156,8 +156,26 @@ export class BackupRestoreComponent {
           const text = await file.text();
           const res = await TennisStorage.importFullBackupJSON(text);
           if (statusDiv) {
-            statusDiv.textContent = `✓ Successfully restored ${res.matchesCount} matches!`;
+            const matchesSummary = (res.matches || []).map(m => `
+              <div class="p-2 bg-slate-900 rounded-lg border border-emerald-500/40 text-left text-xs text-slate-200 mt-1">
+                <strong>${m.config?.p1Name || 'P1'} vs ${m.config?.p2Name || 'P2'}</strong>
+                <span class="text-slate-400">(${(m.points || []).length} points • ${m.config?.matchDate || ''})</span>
+              </div>
+            `).join('');
+
+            statusDiv.innerHTML = `
+              <div class="p-3 bg-emerald-950/60 rounded-xl border border-emerald-500 text-emerald-200 space-y-2 text-center animate-fadeIn">
+                <div class="font-bold text-sm">✓ Successfully restored ${res.matchesCount} match${res.matchesCount === 1 ? '' : 'es'}!</div>
+                ${matchesSummary}
+                <button id="btn-goto-history-after-restore" type="button" class="w-full py-2.5 mt-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs shadow-md active:scale-95">
+                  📂 Open Match History & Analytics →
+                </button>
+              </div>
+            `;
             statusDiv.classList.remove('hidden');
+
+            const btnGoHist = statusDiv.querySelector('#btn-goto-history-after-restore');
+            if (btnGoHist) btnGoHist.onclick = () => this.onNavigate('history');
           }
         } catch (err) {
           alert(`Failed to restore: ${err.message}`);

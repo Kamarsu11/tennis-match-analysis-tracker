@@ -44,13 +44,26 @@
   
   <div id="app"></div>
 
-  <!-- Service Worker Registration -->
+  <!-- Service Worker Registration with Instant Update for Chrome & Safari -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
-          .then((reg) => console.log('🎾 Tennis PWA SW Registered:', reg.scope))
+        navigator.serviceWorker.register('./sw.js?v=13', { updateViaCache: 'none' })
+          .then((reg) => {
+            console.log('🎾 Tennis PWA SW Registered:', reg.scope);
+            // Proactively check for newer SW scripts on every load
+            reg.update();
+          })
           .catch((err) => console.warn('PWA SW Registration failed:', err));
+
+        // When a new service worker takes over, reload once to ensure latest code is active
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (!refreshing) {
+            refreshing = true;
+            window.location.reload();
+          }
+        });
       });
     }
   </script>
