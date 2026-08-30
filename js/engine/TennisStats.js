@@ -842,10 +842,12 @@ export class TennisStats {
         }
       } else {
         // Standard Game Pressure Analysis
-        const isP1GamePt = (server === 'P1' && ((p1D === '40' && p2D !== '40' && p2D !== 'AD') || p1D === 'AD'));
-        const isP2GamePt = (server === 'P2' && ((p2D === '40' && p1D !== '40' && p1D !== 'AD') || p2D === 'AD'));
-        const isP1BreakPt = (server === 'P2' && ((p1D === '40' && p2D !== '40' && p2D !== 'AD') || p1D === 'AD'));
-        const isP2BreakPt = (server === 'P1' && ((p2D === '40' && p1D !== '40' && p1D !== 'AD') || p2D === 'AD'));
+        const isP1DAd = p1D.toLowerCase() === 'ad';
+        const isP2DAd = p2D.toLowerCase() === 'ad';
+        const isP1GamePt = pt.isGamePoint !== undefined ? (server === 'P1' && pt.isGamePoint) : (server === 'P1' && ((p1D === '40' && p2D !== '40' && !isP2DAd) || isP1DAd));
+        const isP2GamePt = pt.isGamePoint !== undefined ? (server === 'P2' && pt.isGamePoint) : (server === 'P2' && ((p2D === '40' && p1D !== '40' && !isP1DAd) || isP2DAd));
+        const isP1BreakPt = pt.isBreakPoint !== undefined ? (server === 'P2' && pt.isBreakPoint) : (server === 'P2' && ((p1D === '40' && p2D !== '40' && !isP2DAd) || isP1DAd));
+        const isP2BreakPt = pt.isBreakPoint !== undefined ? (server === 'P1' && pt.isBreakPoint) : (server === 'P1' && ((p2D === '40' && p1D !== '40' && !isP1DAd) || isP2DAd));
 
         // Game Points
         if (isP1GamePt) {
