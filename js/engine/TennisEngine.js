@@ -360,11 +360,11 @@ export class TennisEngine {
             this.state.setsWon.P2++;
           }
         } else {
-          if (p1G >= gamesReq && (p1G - p2G >= 2 || (p1G === gamesReq && p2G < tbAt) || (p1G === tbAt + 1 && p2G === tbAt))) {
+          if (p1G >= gamesReq && (p1G - p2G >= 2 || (p1G === tbAt + 1 && p2G === tbAt))) {
             isComplete = true;
             winner = 'P1';
             this.state.setsWon.P1++;
-          } else if (p2G >= gamesReq && (p2G - p1G >= 2 || (p2G === gamesReq && p1G < tbAt) || (p2G === tbAt + 1 && p1G === tbAt))) {
+          } else if (p2G >= gamesReq && (p2G - p1G >= 2 || (p2G === tbAt + 1 && p1G === tbAt))) {
             isComplete = true;
             winner = 'P2';
             this.state.setsWon.P2++;
@@ -615,12 +615,12 @@ export class TennisEngine {
     // Check tiebreak condition (e.g. 6-6 in regular, 3-3 in Fast4)
     if (p1G === tbAt && p2G === tbAt) {
       startTiebreak = true;
-    } else if (p1G >= gamesReq && (p1G - p2G >= 2 || (p1G === gamesReq && p2G < tbAt))) {
+    } else if (p1G >= gamesReq && (p1G - p2G >= 2)) {
       // Set won by P1 (e.g. 6-4, 6-3, 7-5)
       setWon = true;
       setWinner = 'P1';
-    } else if (p2G >= gamesReq && (p2G - p1G >= 2 || (p2G === gamesReq && p1G < tbAt))) {
-      // Set won by P2
+    } else if (p2G >= gamesReq && (p2G - p1G >= 2)) {
+      // Set won by P2 (e.g. 4-6, 3-6, 5-7)
       setWon = true;
       setWinner = 'P2';
     }
@@ -765,9 +765,9 @@ export class TennisEngine {
       const p2Games = curSet.p2Games + (player === 'P2' ? 1 : 0);
       const targetG = this.config.gamesPerSet;
       if (player === 'P1') {
-        return p1Games >= targetG && (p1Games - p2Games >= 2 || (p1Games === targetG && p2Games < this.config.tiebreakAt));
+        return p1Games >= targetG && (p1Games - p2Games >= 2);
       } else {
-        return p2Games >= targetG && (p2Games - p1Games >= 2 || (p2Games === targetG && p1Games < this.config.tiebreakAt));
+        return p2Games >= targetG && (p2Games - p1Games >= 2);
       }
     };
 
