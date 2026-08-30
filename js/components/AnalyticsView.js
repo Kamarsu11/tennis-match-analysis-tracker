@@ -24,6 +24,8 @@ export class AnalyticsViewComponent {
       level: 'match', // 'match' | 'set' | 'game' | 'tiebreak'
       setIndex: 0,
       gameIndex: 0,
+      gameStart: 'all',
+      gameEnd: 'all',
       searchComment: '',
       player: 'all',
       outcome: 'all',
@@ -77,20 +79,20 @@ export class AnalyticsViewComponent {
           </div>
         </header>
 
-        <!-- LEVEL FILTER TABS (Match / Set / Game / Tie-break) -->
+        <!-- GLOBAL SCOPE FILTER TABS (Match / Set / Tie-break) -->
         <nav class="bg-slate-900/90 border-b border-slate-800 px-2 py-1.5 flex items-center gap-1 overflow-x-auto no-scrollbar shrink-0 text-xs">
-          <button data-level="match" class="btn-filter-level px-3 py-1 rounded-lg font-bold transition-all ${this.activeFilter.level === 'match' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 text-slate-300'}">
+          <button data-level="match" class="btn-filter-level px-3 py-1 rounded-lg font-bold transition-all ${this.activeFilter.level === 'match' ? 'bg-emerald-500 text-slate-950 shadow' : 'bg-slate-800 text-slate-300'}">
             Match Overall
           </button>
 
           ${this.engine.state.setScores.map((s, idx) => `
-            <button data-level="set" data-set-idx="${idx}" class="btn-filter-level px-3 py-1 rounded-lg font-bold transition-all ${this.activeFilter.level === 'set' && this.activeFilter.setIndex === idx ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 text-slate-300'}">
+            <button data-level="set" data-set-idx="${idx}" class="btn-filter-level px-3 py-1 rounded-lg font-bold transition-all ${this.activeFilter.level === 'set' && this.activeFilter.setIndex === idx ? 'bg-emerald-500 text-slate-950 shadow' : 'bg-slate-800 text-slate-300'}">
               Set ${idx + 1}
             </button>
           `).join('')}
 
           ${this.engine.points.some(p => p.isTiebreak) ? `
-            <button data-level="tiebreak" class="btn-filter-level px-3 py-1 rounded-lg font-bold transition-all ${this.activeFilter.level === 'tiebreak' ? 'bg-indigo-500 text-white' : 'bg-slate-800 text-slate-300'}">
+            <button data-level="tiebreak" class="btn-filter-level px-3 py-1 rounded-lg font-bold transition-all ${this.activeFilter.level === 'tiebreak' ? 'bg-indigo-500 text-white shadow' : 'bg-slate-800 text-slate-300'}">
               Tie-Breaks
             </button>
           ` : ''}
@@ -912,6 +914,26 @@ export class AnalyticsViewComponent {
   // --- TAB 5: POINTS LOG TAB ---
   renderPointsLogTab(config) {
     const allPoints = this.engine.points;
+    const gameBlocks = TennisStats.extractGameBlocks(allPoints, config);
+
+    // Group game blocks dynamically by set
+    const setGroups = [];
+    gameBlocks.forEach(g => {
+      let setGroup = setGroups.find(sg => sg.setIndex === g.setIndex);
+      if (!setGroup) {
+        setGroup = {
+          setIndex: g.setIndex,
+          setNumber: g.setNumber,
+          isTiebreak: g.isTiebreak,
+          startG: g.gameNumber,
+          endG: g.gameNumber,
+          games: []
+        };
+        setGroups.push(setGroup);
+      }
+      setGroup.endG = g.gameNumber;
+      setGroup.games.push(g);
+    });
 
     return `
       <!-- CHRONOLOGICAL POINT LOG WITH MULTI-CRITERIA AND-FILTERING -->
@@ -940,11 +962,50 @@ export class AnalyticsViewComponent {
           </button>
         </div>
 
+        <!-- GAME RANGE FILTER BAR (G1 to G1, G1 to G3, G4 to G16, etc.) -->
+        <div class="flex items-center justify-between gap-2 flex-wrap text-xs bg-slate-950/90 p-2.5 rounded-xl border border-slate-800">
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <span class="text-slate-400 text-[11px] font-semibold">🎮 Games:</span>
+            <button class="btn-log-game-range-chip px-2 py-0.5 rounded-md border text-[11px] font-bold transition-all ${this.activeFilter.gameStart === 'all' && this.activeFilter.gameEnd === 'all' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500' : 'bg-slate-900 text-slate-400 border-slate-800'}" data-range="all">
+              All Games (1–${gameBlocks.length})
+            </button>
+            ${setGroups.map(sg => {
+              const rangeKey = `${sg.startG}-${sg.endG}`;
+              const label = sg.isTiebreak && sg.startG === sg.endG 
+                ? `Set ${sg.setNumber} Match TB (G${sg.startG})`
+                : (sg.startG === sg.endG ? `Set ${sg.setNumber} (G${sg.startG})` : `Set ${sg.setNumber} (G${sg.startG}–${sg.endG})`);
+              const isSelected = this.activeFilter.gameStart == sg.startG && this.activeFilter.gameEnd == sg.endG;
+              return `
+                <button 
+                  class="btn-log-game-range-chip px-2 py-0.5 rounded-md border text-[11px] font-bold transition-all ${isSelected ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500' : 'bg-slate-900 text-slate-400 border-slate-800'}" 
+                  data-range="${rangeKey}"
+                >
+                  ${label}
+                </button>
+              `;
+            }).join('')}
+          </div>
+
+          <!-- Custom Game From / To Dropdowns -->
+          <div class="flex items-center gap-1 text-[11px]">
+            <span class="text-slate-400 font-semibold">From:</span>
+            <select id="sel-log-game-start" class="bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-white text-[11px]">
+              <option value="all" ${this.activeFilter.gameStart === 'all' ? 'selected' : ''}>Start Game</option>
+              ${gameBlocks.map(g => `<option value="${g.gameNumber}" ${this.activeFilter.gameStart == g.gameNumber ? 'selected' : ''}>G${g.gameNumber}</option>`).join('')}
+            </select>
+            <span class="text-slate-500 font-bold">to</span>
+            <select id="sel-log-game-end" class="bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-white text-[11px]">
+              <option value="all" ${this.activeFilter.gameEnd === 'all' ? 'selected' : ''}>End Game</option>
+              ${gameBlocks.map(g => `<option value="${g.gameNumber}" ${this.activeFilter.gameEnd == g.gameNumber ? 'selected' : ''}>G${g.gameNumber}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+
         <!-- MULTI-CRITERIA AND FILTERS -->
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-xs bg-slate-950/80 p-2.5 rounded-xl border border-slate-800">
           <!-- Event Player Filter -->
           <div>
-            <label class="block text-[10px] text-slate-400 font-semibold mb-0.5">Event Player (Hitter/Error)</label>
+            <label class="block text-[10px] text-slate-400 font-semibold mb-0.5">Event Player</label>
             <select id="filter-player" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-[11px] text-white">
               <option value="all">All Event Players</option>
               <option value="P1" ${this.activeFilter.player === 'P1' ? 'selected' : ''}>${config.p1Name}</option>
@@ -1028,7 +1089,7 @@ export class AnalyticsViewComponent {
 
           <!-- Cause / Diagnostic Filter -->
           <div>
-            <label class="block text-[10px] text-slate-400 font-semibold mb-0.5">Cause / Error Reason</label>
+            <label class="block text-[10px] text-slate-400 font-semibold mb-0.5">Error Cause</label>
             <select id="filter-cause" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-[11px] text-white">
               <option value="all">All Causes</option>
               <option value="spacing" ${this.activeFilter.errorCause === 'spacing' ? 'selected' : ''}>Spacing</option>
@@ -1067,15 +1128,25 @@ export class AnalyticsViewComponent {
   getFilteredPoints(points) {
     const f = this.activeFilter;
     const filterText = (f.searchComment || '').toLowerCase().trim();
+    const gameBlocks = TennisStats.extractGameBlocks(points, this.engine.config);
 
     return points.filter(pt => {
       if (pt.type === 'score_jump' || pt.isUntracked) return false;
 
       // 0. Quick filter chip
       if (f.quick === 'starred' && !pt.isStarred) return false;
-      if (f.quick === 'pressure' && !pt.isPressurePoint) return false;
+      if (f.quick === 'pressure' && !TennisStats.isPointPressure(pt)) return false;
       if (f.quick === 'winners' && pt.outcome !== 'winner' && pt.outcome !== 'ace' && pt.outcome !== 'service_winner') return false;
       if (f.quick === 'ues' && pt.outcome !== 'unforced_error' && pt.outcome !== 'double_fault') return false;
+
+      // Game Range Filter (g1 to g1, g1 to g3, g4 to g16, etc.)
+      if (f.gameStart !== 'all' || f.gameEnd !== 'all') {
+        const gb = gameBlocks.find(g => g.setIndex === pt.setIndex && g.gameIndex === pt.gameIndex && Boolean(g.isTiebreak) === Boolean(pt.isTiebreak));
+        const ptG = gb ? gb.gameNumber : 1;
+        const start = f.gameStart !== 'all' ? parseInt(f.gameStart, 10) : 1;
+        const end = f.gameEnd !== 'all' ? parseInt(f.gameEnd, 10) : (gameBlocks.length || 999);
+        if (ptG < start || ptG > end) return false;
+      }
 
       // 1. Level Filter (Set / Game / TB)
       if (f.level === 'set' && pt.setIndex !== f.setIndex) return false;
@@ -1153,6 +1224,8 @@ export class AnalyticsViewComponent {
       return '<div class="text-xs text-amber-400 italic text-center py-4">No points match the selected filter combination.</div>';
     }
 
+    const gameBlocks = TennisStats.extractGameBlocks(trackedPoints, config);
+
     return filtered.slice().reverse().map(pt => {
       const p1Name = config.p1Name || 'P1';
       const p2Name = config.p2Name || 'P2';
@@ -1182,6 +1255,10 @@ export class AnalyticsViewComponent {
       const gameScore = `${sBefore.p1Games || 0}-${sBefore.p2Games || 0}`;
       const ptScore = `${sBefore.p1Display || '0'}-${sBefore.p2Display || '0'}`;
 
+      // Game block lookup
+      const gb = gameBlocks.find(g => g.setIndex === pt.setIndex && g.gameIndex === pt.gameIndex && Boolean(g.isTiebreak) === Boolean(pt.isTiebreak));
+      const gNum = pt.gameNumber || (gb ? gb.gameNumber : 1);
+
       let scoreContextLabel = '';
       if (isTB) {
         scoreContextLabel = `S${setNum} Match TB (${ptScore})`;
@@ -1192,10 +1269,14 @@ export class AnalyticsViewComponent {
       return `
         <div class="p-2.5 rounded-xl bg-slate-950 border ${isStar ? 'border-amber-500/60 shadow-amber-950/20' : (isPressure ? 'border-orange-500/40' : 'border-slate-800/80')} text-xs space-y-2 transition-all">
           
-          <!-- TOP HEADER ROW: POINT #, GAME/POINT SCORE, STAR & PRESSURE -->
+          <!-- TOP HEADER ROW: POINT #, GAME NUMBER, SCORE CONTEXT, STAR & PRESSURE -->
           <div class="flex items-center justify-between border-b border-slate-900 pb-1.5">
             <div class="flex items-center gap-1.5 flex-wrap">
               <span class="text-[11px] font-mono font-bold text-slate-300">Pt #${ptNum}</span>
+              <span class="text-slate-600">•</span>
+              <span class="text-[10px] font-mono text-cyan-400 font-bold bg-cyan-950/40 px-1.5 py-0.5 rounded border border-cyan-900/60">
+                Game #${gNum}
+              </span>
               <span class="text-slate-600">•</span>
               <span class="text-[11px] font-mono text-emerald-400 font-semibold bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-900/60">
                 ${scoreContextLabel}
@@ -1496,6 +1577,61 @@ export class AnalyticsViewComponent {
       };
     }
 
+    // Log Tab Game range preset chips
+    this.container.querySelectorAll('.btn-log-game-range-chip').forEach(chip => {
+      chip.onclick = () => {
+        const range = chip.getAttribute('data-range') || 'all';
+        if (range === 'all') {
+          this.activeFilter.gameStart = 'all';
+          this.activeFilter.gameEnd = 'all';
+        } else {
+          const parts = range.split('-');
+          if (parts.length === 2) {
+            this.activeFilter.gameStart = parts[0];
+            this.activeFilter.gameEnd = parts[1];
+          }
+        }
+        updateFilteredLog();
+        const selStart = this.container.querySelector('#sel-log-game-start');
+        const selEnd = this.container.querySelector('#sel-log-game-end');
+        if (selStart) selStart.value = this.activeFilter.gameStart;
+        if (selEnd) selEnd.value = this.activeFilter.gameEnd;
+        this.container.querySelectorAll('.btn-log-game-range-chip').forEach(c => {
+          const isSelected = c.getAttribute('data-range') === range;
+          c.className = `btn-log-game-range-chip px-2 py-0.5 rounded-md border text-[11px] font-bold transition-all ${isSelected ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500' : 'bg-slate-900 text-slate-400 border-slate-800'}`;
+        });
+      };
+    });
+
+    // Log Tab Custom game range selects
+    const selLogStart = this.container.querySelector('#sel-log-game-start');
+    const selLogEnd = this.container.querySelector('#sel-log-game-end');
+    if (selLogStart && selLogEnd) {
+      const handleLogGameSelect = () => {
+        const s = selLogStart.value;
+        const e = selLogEnd.value;
+        if (s !== 'all' && e !== 'all') {
+          const sNum = parseInt(s, 10);
+          const eNum = parseInt(e, 10);
+          if (sNum <= eNum) {
+            this.activeFilter.gameStart = s;
+            this.activeFilter.gameEnd = e;
+          } else {
+            this.activeFilter.gameStart = e;
+            this.activeFilter.gameEnd = s;
+            selLogStart.value = e;
+            selLogEnd.value = s;
+          }
+        } else {
+          this.activeFilter.gameStart = s;
+          this.activeFilter.gameEnd = e;
+        }
+        updateFilteredLog();
+      };
+      selLogStart.onchange = handleLogGameSelect;
+      selLogEnd.onchange = handleLogGameSelect;
+    }
+
     // Filter dropdowns
     const selPlayer = this.container.querySelector('#filter-player');
     if (selPlayer) selPlayer.onchange = (e) => { this.activeFilter.player = e.target.value; updateFilteredLog(); };
@@ -1528,6 +1664,8 @@ export class AnalyticsViewComponent {
     if (btnReset) {
       btnReset.onclick = () => {
         this.activeFilter.quick = 'all';
+        this.activeFilter.gameStart = 'all';
+        this.activeFilter.gameEnd = 'all';
         this.activeFilter.player = 'all';
         this.activeFilter.serve = 'all';
         this.activeFilter.outcome = 'all';

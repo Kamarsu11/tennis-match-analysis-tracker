@@ -48,7 +48,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js?v=14', { updateViaCache: 'none' })
+        navigator.serviceWorker.register('./sw.js?v=18', { updateViaCache: 'none' })
           .then((reg) => {
             console.log('🎾 Tennis PWA SW Registered:', reg.scope);
             // Proactively check for newer SW scripts on every load
