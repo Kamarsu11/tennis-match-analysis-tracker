@@ -644,6 +644,7 @@ export class AnalyticsViewComponent {
     const p2 = pressureData.P2 || {};
     const scenarios = pressureData.breakdown || {};
     const errors = pressureData.pressureErrors || { P1: {}, P2: {} };
+    const rallyComp = pressureData.rallyComparison || {};
     const totalPressure = pressureData.pressureTotal || 0;
 
     const p1Clutch = p1.clutchDiff || 0;
@@ -734,6 +735,83 @@ export class AnalyticsViewComponent {
         ${this.renderStatRow('Match Points Won / Chances', `${mp.p1Won || 0}/${mp.p1Opportunities || 0}`, `${mp.p2Won || 0}/${mp.p2Opportunities || 0}`)}
         ${this.renderStatRow('Deuce Points (40-40) Won', `${dp.p1Won || 0}/${dp.total || 0} (${dp.p1WonPct || 0}%)`, `${dp.p2Won || 0}/${dp.total || 0} (${dp.p2WonPct || 0}%)`)}
         ${this.renderStatRow('Late Tiebreak Points (≥4-4)', `${ltb.p1Won || 0}/${ltb.total || 0}`, `${ltb.p2Won || 0}/${ltb.total || 0}`)}
+      </section>
+
+      <!-- RALLY LENGTH PATTERNS: PRESSURE VS STANDARD POINTS -->
+      <section class="bg-slate-900 rounded-2xl p-3.5 border border-slate-800 space-y-3">
+        <div class="flex items-center justify-between pb-1 border-b border-slate-800">
+          <div>
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Rally Length Patterns (Pressure vs Standard)</h3>
+            <p class="text-[11px] text-slate-400 mt-0.5">Execution & error breakdown across rally lengths</p>
+          </div>
+          <span class="text-[10px] text-orange-400 font-bold">⚡ vs ⚖️</span>
+        </div>
+
+        <div class="space-y-3">
+          ${['1-4', '5-8', '9+'].map(bracket => {
+            const fallbackLabel = bracket === '1-4' ? '1–4 Shots (First Strike)' : (bracket === '5-8' ? '5–8 Shots (Rally Tolerance)' : '9+ Shots (Extended Grinding)');
+            const item = (rallyComp && rallyComp[bracket]) ? rallyComp[bracket] : {
+              label: fallbackLabel,
+              pressure: { total: 0, p1Won: 0, p2Won: 0, p1WonPct: 0, p2WonPct: 0, p1Winners: 0, p2Winners: 0, p1UEs: 0, p2UEs: 0, p1DFs: 0, p2DFs: 0 },
+              standard: { total: 0, p1Won: 0, p2Won: 0, p1WonPct: 0, p2WonPct: 0, p1Winners: 0, p2Winners: 0, p1UEs: 0, p2UEs: 0, p1DFs: 0, p2DFs: 0 },
+            };
+            const p = item.pressure || { total: 0, p1Won: 0, p2Won: 0, p1WonPct: 0, p2WonPct: 0, p1Winners: 0, p2Winners: 0, p1UEs: 0, p2UEs: 0, p1DFs: 0, p2DFs: 0 };
+            const s = item.standard || { total: 0, p1Won: 0, p2Won: 0, p1WonPct: 0, p2WonPct: 0, p1Winners: 0, p2Winners: 0, p1UEs: 0, p2UEs: 0, p1DFs: 0, p2DFs: 0 };
+
+            return `
+              <div class="p-3 bg-slate-950 rounded-xl border border-slate-800/90 space-y-2.5">
+                <div class="flex items-center justify-between text-xs">
+                  <span class="font-bold text-slate-200">${item.label || fallbackLabel}</span>
+                  <span class="text-[11px] text-slate-400 font-mono">${p.total || 0} Pressure • ${s.total || 0} Standard</span>
+                </div>
+
+                <!-- Pressure Points Row -->
+                <div class="bg-slate-900/90 p-2.5 rounded-lg border border-orange-900/40 space-y-1.5">
+                  <div class="flex items-center justify-between text-[11px]">
+                    <span class="text-orange-400 font-bold flex items-center gap-1">⚡ Pressure Points (${p.total || 0} pts)</span>
+                    <span class="font-mono text-[11px]">
+                      <span class="text-emerald-400 font-bold">${config.p1Name}: ${p.p1Won || 0} (${p.p1WonPct || 0}%)</span>
+                      <span class="text-slate-600 mx-1">|</span>
+                      <span class="text-indigo-400 font-bold">${config.p2Name}: ${p.p2Won || 0} (${p.p2WonPct || 0}%)</span>
+                    </span>
+                  </div>
+
+                  <div class="h-2 rounded-full bg-slate-800 overflow-hidden flex">
+                    <div class="bg-emerald-500" style="width: ${p.p1WonPct || 0}%"></div>
+                    <div class="bg-indigo-500" style="width: ${p.p2WonPct || 0}%"></div>
+                  </div>
+
+                  <div class="grid grid-cols-2 gap-2 text-[10px] text-slate-400 pt-0.5">
+                    <div>${config.p1Name}: <strong class="text-emerald-400">${p.p1Winners || 0}W</strong> • <strong class="text-rose-400">${p.p1UEs || 0}UE</strong>${p.p1DFs ? ` • <strong class="text-amber-400">${p.p1DFs}DF</strong>` : ''}</div>
+                    <div class="text-right">${config.p2Name}: <strong class="text-indigo-400">${p.p2Winners || 0}W</strong> • <strong class="text-rose-400">${p.p2UEs || 0}UE</strong>${p.p2DFs ? ` • <strong class="text-amber-400">${p.p2DFs}DF</strong>` : ''}</div>
+                  </div>
+                </div>
+
+                <!-- Standard Points Row -->
+                <div class="bg-slate-900/60 p-2.5 rounded-lg border border-slate-800/80 space-y-1.5">
+                  <div class="flex items-center justify-between text-[11px]">
+                    <span class="text-slate-400 font-semibold flex items-center gap-1">⚖️ Standard Points (${s.total || 0} pts)</span>
+                    <span class="font-mono text-[11px]">
+                      <span class="text-emerald-400 font-bold">${config.p1Name}: ${s.p1Won || 0} (${s.p1WonPct || 0}%)</span>
+                      <span class="text-slate-600 mx-1">|</span>
+                      <span class="text-indigo-400 font-bold">${config.p2Name}: ${s.p2Won || 0} (${s.p2WonPct || 0}%)</span>
+                    </span>
+                  </div>
+
+                  <div class="h-2 rounded-full bg-slate-800 overflow-hidden flex">
+                    <div class="bg-emerald-500/70" style="width: ${s.p1WonPct || 0}%"></div>
+                    <div class="bg-indigo-500/70" style="width: ${s.p2WonPct || 0}%"></div>
+                  </div>
+
+                  <div class="grid grid-cols-2 gap-2 text-[10px] text-slate-400 pt-0.5">
+                    <div>${config.p1Name}: <strong class="text-emerald-300">${s.p1Winners || 0}W</strong> • <strong class="text-rose-300">${s.p1UEs || 0}UE</strong>${s.p1DFs ? ` • <strong class="text-amber-300">${s.p1DFs}DF</strong>` : ''}</div>
+                    <div class="text-right">${config.p2Name}: <strong class="text-indigo-300">${s.p2Winners || 0}W</strong> • <strong class="text-rose-300">${s.p2UEs || 0}UE</strong>${s.p2DFs ? ` • <strong class="text-amber-300">${s.p2DFs}DF</strong>` : ''}</div>
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
       </section>
 
       <!-- PRESSURE UNFORCED ERRORS & MISS LOCATIONS -->

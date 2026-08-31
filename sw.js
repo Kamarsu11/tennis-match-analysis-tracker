@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tennis-analysis-v20';
+const CACHE_NAME = 'tennis-analysis-v25';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',

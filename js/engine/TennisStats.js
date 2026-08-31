@@ -101,14 +101,14 @@ export class TennisStats {
       }
 
       // Rally Bracket Handling
-      const rallyBracket = pt.rallyLength || (pt.outcome === 'ace' || pt.outcome === 'double_fault' || pt.outcome === 'service_winner' ? '1-4' : 'unspecified');
+      const rallyBracket = this.normalizeRallyBracket(pt.rallyLength, pt.outcome);
       if (matchSummary.rallyDistribution[rallyBracket]) {
         const rDist = matchSummary.rallyDistribution[rallyBracket];
         rDist.total++;
         if (winner === 'P1') rDist.p1Won++;
         else rDist.p2Won++;
 
-        if (pt.outcome === 'winner' || pt.outcome === 'ace') {
+        if (pt.outcome === 'winner' || pt.outcome === 'ace' || pt.outcome === 'service_winner') {
           if (winner === 'P1') rDist.p1Winners++;
           else rDist.p2Winners++;
         } else if (pt.outcome === 'unforced_error') {
@@ -117,6 +117,9 @@ export class TennisStats {
         } else if (pt.outcome === 'forced_error') {
           if (loser === 'P1') rDist.p1FEs++;
           else rDist.p2FEs++;
+        } else if (pt.outcome === 'double_fault') {
+          if (pt.server === 'P1') rDist.p1UEs++;
+          else rDist.p2UEs++;
         }
       }
 
@@ -725,6 +728,9 @@ export class TennisStats {
     if (filter.gameIndex !== undefined) {
       filteredPoints = filteredPoints.filter(p => p.gameIndex === filter.gameIndex);
     }
+    if (filter.isTiebreak !== undefined) {
+      filteredPoints = filteredPoints.filter(p => Boolean(p.isTiebreak) === Boolean(filter.isTiebreak));
+    }
 
     const p1Name = config.p1Name || 'Player 1';
     const p2Name = config.p2Name || 'Player 2';
@@ -769,6 +775,25 @@ export class TennisStats {
       P2: { totalUE: 0, net: 0, wide_left: 0, wide_right: 0, long: 0, unspecified: 0, doubleFaults: 0, spacing: 0, mindset: 0, above_shoulder: 0, let_ball: 0 },
     };
 
+    // Rally Length Comparison between Pressure Points vs Standard Points
+    const rallyComparison = {
+      '1-4': {
+        label: '1–4 Shots (First Strike)',
+        pressure: { total: 0, p1Won: 0, p2Won: 0, p1Winners: 0, p2Winners: 0, p1UEs: 0, p2UEs: 0, p1DFs: 0, p2DFs: 0, p1FEs: 0, p2FEs: 0 },
+        standard: { total: 0, p1Won: 0, p2Won: 0, p1Winners: 0, p2Winners: 0, p1UEs: 0, p2UEs: 0, p1DFs: 0, p2DFs: 0, p1FEs: 0, p2FEs: 0 },
+      },
+      '5-8': {
+        label: '5–8 Shots (Rally Tolerance)',
+        pressure: { total: 0, p1Won: 0, p2Won: 0, p1Winners: 0, p2Winners: 0, p1UEs: 0, p2UEs: 0, p1DFs: 0, p2DFs: 0, p1FEs: 0, p2FEs: 0 },
+        standard: { total: 0, p1Won: 0, p2Won: 0, p1Winners: 0, p2Winners: 0, p1UEs: 0, p2UEs: 0, p1DFs: 0, p2DFs: 0, p1FEs: 0, p2FEs: 0 },
+      },
+      '9+': {
+        label: '9+ Shots (Extended Grinding)',
+        pressure: { total: 0, p1Won: 0, p2Won: 0, p1Winners: 0, p2Winners: 0, p1UEs: 0, p2UEs: 0, p1DFs: 0, p2DFs: 0, p1FEs: 0, p2FEs: 0 },
+        standard: { total: 0, p1Won: 0, p2Won: 0, p1Winners: 0, p2Winners: 0, p1UEs: 0, p2UEs: 0, p1DFs: 0, p2DFs: 0, p1FEs: 0, p2FEs: 0 },
+      },
+    };
+
     filteredPoints.forEach(pt => {
       const winner = pt.winnerPlayer;
       const loser = winner === 'P1' ? 'P2' : 'P1';
@@ -806,6 +831,28 @@ export class TennisStats {
       } else {
         if (winner === 'P1') p1NonPressureWon++;
         else p2NonPressureWon++;
+      }
+
+      // Rally length distribution breakdown for Pressure vs Standard
+      const targetRallyType = isPressure ? 'pressure' : 'standard';
+      const bracket = this.normalizeRallyBracket(pt.rallyLength, pt.outcome);
+      const rBucket = rallyComparison[bracket] ? rallyComparison[bracket][targetRallyType] : rallyComparison['1-4'][targetRallyType];
+      rBucket.total++;
+      if (winner === 'P1') rBucket.p1Won++;
+      else rBucket.p2Won++;
+
+      if (pt.outcome === 'winner' || pt.outcome === 'ace' || pt.outcome === 'service_winner') {
+        if (winner === 'P1') rBucket.p1Winners++;
+        else rBucket.p2Winners++;
+      } else if (pt.outcome === 'unforced_error') {
+        if (loser === 'P1') rBucket.p1UEs++;
+        else rBucket.p2UEs++;
+      } else if (pt.outcome === 'forced_error') {
+        if (loser === 'P1') rBucket.p1FEs++;
+        else rBucket.p2FEs++;
+      } else if (pt.outcome === 'double_fault') {
+        if (pt.server === 'P1') rBucket.p1DFs++;
+        else rBucket.p2DFs++;
       }
 
       // Tiebreak Pressure Analysis
@@ -934,6 +981,16 @@ export class TennisStats {
     ltb.p1WonPct = ltb.total > 0 ? Math.round((ltb.p1Won / ltb.total) * 100) : 0;
     ltb.p2WonPct = ltb.total > 0 ? Math.round((ltb.p2Won / ltb.total) * 100) : 0;
 
+    // Rally comparison percentages
+    Object.keys(rallyComparison).forEach(brk => {
+      const item = rallyComparison[brk];
+      ['pressure', 'standard'].forEach(sub => {
+        const b = item[sub];
+        b.p1WonPct = b.total > 0 ? Math.round((b.p1Won / b.total) * 100) : 0;
+        b.p2WonPct = b.total > 0 ? Math.round((b.p2Won / b.total) * 100) : 0;
+      });
+    });
+
     // Clutch Ratings
     const p1PressurePct = pressurePoints.length > 0 ? Math.round((p1PressureWon / pressurePoints.length) * 100) : 0;
     const p2PressurePct = pressurePoints.length > 0 ? Math.round((p2PressureWon / pressurePoints.length) * 100) : 0;
@@ -966,7 +1023,29 @@ export class TennisStats {
       },
       breakdown,
       pressureErrors,
+      rallyComparison,
     };
+  }
+
+  /**
+   * Normalizes any raw rally length input into standard brackets ('1-4', '5-8', '9+')
+   */
+  static normalizeRallyBracket(val, outcome = '') {
+    if (!val) {
+      if (outcome === 'ace' || outcome === 'double_fault' || outcome === 'service_winner') return '1-4';
+      return '1-4';
+    }
+    const str = String(val).trim().toLowerCase();
+    if (str.startsWith('1') || str.includes('1-4') || str.includes('1–4') || str.includes('short')) return '1-4';
+    if (str.startsWith('5') || str.includes('5-8') || str.includes('5–8') || str.includes('medium')) return '5-8';
+    if (str.startsWith('9') || str.includes('9+') || str.includes('long')) return '9+';
+    const num = parseInt(str, 10);
+    if (!isNaN(num)) {
+      if (num <= 4) return '1-4';
+      if (num <= 8) return '5-8';
+      return '9+';
+    }
+    return '1-4';
   }
 
   /**
