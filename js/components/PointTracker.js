@@ -315,7 +315,7 @@ export class PointTrackerComponent {
                 <span class="text-xs font-bold ${server === 'P1' ? 'text-lime-400' : 'text-slate-400'}">${server === 'P1' ? '🎾 Serving' : 'Receiving'}</span>
                 ${sb.p1Child ? '<span class="text-[10px] text-sky-300 bg-sky-950 px-1 rounded">Child</span>' : ''}
               </div>
-              <div class="text-base font-extrabold truncate">${sb.p1Name}</div>
+              <div class="text-sm sm:text-base font-extrabold break-words leading-tight line-clamp-2">${sb.p1Name}</div>
             </button>
 
             <!-- P2 Button -->
@@ -324,7 +324,7 @@ export class PointTrackerComponent {
                 <span class="text-xs font-bold ${server === 'P2' ? 'text-lime-400' : 'text-slate-400'}">${server === 'P2' ? '🎾 Serving' : 'Receiving'}</span>
                 ${sb.p2Child ? '<span class="text-[10px] text-sky-300 bg-sky-950 px-1 rounded">Child</span>' : ''}
               </div>
-              <div class="text-base font-extrabold truncate">${sb.p2Name}</div>
+              <div class="text-sm sm:text-base font-extrabold break-words leading-tight line-clamp-2">${sb.p2Name}</div>
             </button>
           </div>
         </section>

@@ -67,7 +67,7 @@ export class MatchHistoryComponent {
 
         <div class="space-y-1">
           <div class="text-base font-extrabold text-white flex items-center justify-between">
-            <span class="truncate">${config.p1Name} ${config.p1Child ? '⭐️' : ''} vs ${config.p2Name} ${config.p2Child ? '⭐️' : ''}</span>
+            <span class="break-words leading-snug">${config.p1Name} ${config.p1Child ? '⭐️' : ''} vs ${config.p2Name} ${config.p2Child ? '⭐️' : ''}</span>
           </div>
           <div class="text-xs text-slate-400">
             ${config.name || 'Custom Match'} • ${ptsCount} points logged

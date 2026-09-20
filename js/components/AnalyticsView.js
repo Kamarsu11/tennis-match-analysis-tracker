@@ -158,11 +158,11 @@ export class AnalyticsViewComponent {
       <div class="bg-slate-900 rounded-2xl p-3.5 border border-slate-800 shadow-lg">
         <div class="grid grid-cols-2 gap-3 text-center">
           <div>
-            <div class="text-xs text-slate-400 font-semibold mb-0.5">${config.p1Name} ${config.p1Child ? '⭐️' : ''}</div>
+            <div class="text-xs text-slate-400 font-semibold mb-0.5 break-words leading-tight">${config.p1Name} ${config.p1Child ? '⭐️' : ''}</div>
             <div class="text-2xl font-black text-white">${p1.totalPointsWon} <span class="text-xs font-normal text-slate-400">pts</span></div>
           </div>
           <div>
-            <div class="text-xs text-slate-400 font-semibold mb-0.5">${config.p2Name} ${config.p2Child ? '⭐️' : ''}</div>
+            <div class="text-xs text-slate-400 font-semibold mb-0.5 break-words leading-tight">${config.p2Name} ${config.p2Child ? '⭐️' : ''}</div>
             <div class="text-2xl font-black text-white">${p2.totalPointsWon} <span class="text-xs font-normal text-slate-400">pts</span></div>
           </div>
         </div>
@@ -683,7 +683,7 @@ export class AnalyticsViewComponent {
         <div class="grid grid-cols-2 gap-2.5">
           <!-- P1 Clutch Card -->
           <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2 text-center">
-            <div class="font-bold text-emerald-400 text-xs truncate">${config.p1Name}</div>
+            <div class="font-bold text-emerald-400 text-xs break-words leading-tight min-h-[2.25rem] flex items-center justify-center">${config.p1Name}</div>
             <div class="text-2xl font-black font-mono ${p1ClutchColor}">
               ${p1Clutch > 0 ? '+' : ''}${p1Clutch}%
             </div>
@@ -702,7 +702,7 @@ export class AnalyticsViewComponent {
 
           <!-- P2 Clutch Card -->
           <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2 text-center">
-            <div class="font-bold text-indigo-400 text-xs truncate">${config.p2Name}</div>
+            <div class="font-bold text-indigo-400 text-xs break-words leading-tight min-h-[2.25rem] flex items-center justify-center">${config.p2Name}</div>
             <div class="text-2xl font-black font-mono ${p2ClutchColor}">
               ${p2Clutch > 0 ? '+' : ''}${p2Clutch}%
             </div>
@@ -767,13 +767,13 @@ export class AnalyticsViewComponent {
 
                 <!-- Pressure Points Row -->
                 <div class="bg-slate-900/90 p-2.5 rounded-lg border border-orange-900/40 space-y-1.5">
-                  <div class="flex items-center justify-between text-[11px]">
+                  <div class="flex flex-wrap items-center justify-between gap-1 text-[11px]">
                     <span class="text-orange-400 font-bold flex items-center gap-1">⚡ Pressure Points (${p.total || 0} pts)</span>
-                    <span class="font-mono text-[11px]">
-                      <span class="text-emerald-400 font-bold">${config.p1Name}: ${p.p1Won || 0} (${p.p1WonPct || 0}%)</span>
-                      <span class="text-slate-600 mx-1">|</span>
-                      <span class="text-indigo-400 font-bold">${config.p2Name}: ${p.p2Won || 0} (${p.p2WonPct || 0}%)</span>
-                    </span>
+                    <div class="font-mono text-[11px] flex flex-wrap gap-x-2 gap-y-0.5">
+                      <span class="text-emerald-400 font-bold break-words">${config.p1Name}: ${p.p1Won || 0} (${p.p1WonPct || 0}%)</span>
+                      <span class="text-slate-600 hidden sm:inline">|</span>
+                      <span class="text-indigo-400 font-bold break-words">${config.p2Name}: ${p.p2Won || 0} (${p.p2WonPct || 0}%)</span>
+                    </div>
                   </div>
 
                   <div class="h-2 rounded-full bg-slate-800 overflow-hidden flex">
@@ -782,20 +782,20 @@ export class AnalyticsViewComponent {
                   </div>
 
                   <div class="grid grid-cols-2 gap-2 text-[10px] text-slate-400 pt-0.5">
-                    <div>${config.p1Name}: <strong class="text-emerald-400">${p.p1Winners || 0}W</strong> • <strong class="text-rose-400">${p.p1UEs || 0}UE</strong>${p.p1DFs ? ` • <strong class="text-amber-400">${p.p1DFs}DF</strong>` : ''}</div>
-                    <div class="text-right">${config.p2Name}: <strong class="text-indigo-400">${p.p2Winners || 0}W</strong> • <strong class="text-rose-400">${p.p2UEs || 0}UE</strong>${p.p2DFs ? ` • <strong class="text-amber-400">${p.p2DFs}DF</strong>` : ''}</div>
+                    <div class="break-words leading-tight"><span class="font-semibold text-slate-300">${config.p1Name}:</span> <strong class="text-emerald-400">${p.p1Winners || 0}W</strong> • <strong class="text-rose-400">${p.p1UEs || 0}UE</strong>${p.p1DFs ? ` • <strong class="text-amber-400">${p.p1DFs}DF</strong>` : ''}</div>
+                    <div class="text-right break-words leading-tight"><span class="font-semibold text-slate-300">${config.p2Name}:</span> <strong class="text-indigo-400">${p.p2Winners || 0}W</strong> • <strong class="text-rose-400">${p.p2UEs || 0}UE</strong>${p.p2DFs ? ` • <strong class="text-amber-400">${p.p2DFs}DF</strong>` : ''}</div>
                   </div>
                 </div>
 
                 <!-- Standard Points Row -->
                 <div class="bg-slate-900/60 p-2.5 rounded-lg border border-slate-800/80 space-y-1.5">
-                  <div class="flex items-center justify-between text-[11px]">
+                  <div class="flex flex-wrap items-center justify-between gap-1 text-[11px]">
                     <span class="text-slate-400 font-semibold flex items-center gap-1">⚖️ Standard Points (${s.total || 0} pts)</span>
-                    <span class="font-mono text-[11px]">
-                      <span class="text-emerald-400 font-bold">${config.p1Name}: ${s.p1Won || 0} (${s.p1WonPct || 0}%)</span>
-                      <span class="text-slate-600 mx-1">|</span>
-                      <span class="text-indigo-400 font-bold">${config.p2Name}: ${s.p2Won || 0} (${s.p2WonPct || 0}%)</span>
-                    </span>
+                    <div class="font-mono text-[11px] flex flex-wrap gap-x-2 gap-y-0.5">
+                      <span class="text-emerald-400 font-bold break-words">${config.p1Name}: ${s.p1Won || 0} (${s.p1WonPct || 0}%)</span>
+                      <span class="text-slate-600 hidden sm:inline">|</span>
+                      <span class="text-indigo-400 font-bold break-words">${config.p2Name}: ${s.p2Won || 0} (${s.p2WonPct || 0}%)</span>
+                    </div>
                   </div>
 
                   <div class="h-2 rounded-full bg-slate-800 overflow-hidden flex">
@@ -804,8 +804,8 @@ export class AnalyticsViewComponent {
                   </div>
 
                   <div class="grid grid-cols-2 gap-2 text-[10px] text-slate-400 pt-0.5">
-                    <div>${config.p1Name}: <strong class="text-emerald-300">${s.p1Winners || 0}W</strong> • <strong class="text-rose-300">${s.p1UEs || 0}UE</strong>${s.p1DFs ? ` • <strong class="text-amber-300">${s.p1DFs}DF</strong>` : ''}</div>
-                    <div class="text-right">${config.p2Name}: <strong class="text-indigo-300">${s.p2Winners || 0}W</strong> • <strong class="text-rose-300">${s.p2UEs || 0}UE</strong>${s.p2DFs ? ` • <strong class="text-amber-300">${s.p2DFs}DF</strong>` : ''}</div>
+                    <div class="break-words leading-tight"><span class="font-semibold text-slate-300">${config.p1Name}:</span> <strong class="text-emerald-300">${s.p1Winners || 0}W</strong> • <strong class="text-rose-300">${s.p1UEs || 0}UE</strong>${s.p1DFs ? ` • <strong class="text-amber-300">${s.p1DFs}DF</strong>` : ''}</div>
+                    <div class="text-right break-words leading-tight"><span class="font-semibold text-slate-300">${config.p2Name}:</span> <strong class="text-indigo-300">${s.p2Winners || 0}W</strong> • <strong class="text-rose-300">${s.p2UEs || 0}UE</strong>${s.p2DFs ? ` • <strong class="text-amber-300">${s.p2DFs}DF</strong>` : ''}</div>
                   </div>
                 </div>
               </div>
@@ -824,7 +824,10 @@ export class AnalyticsViewComponent {
         <div class="grid grid-cols-2 gap-2 text-xs">
           <!-- P1 Pressure Errors -->
           <div class="p-2.5 bg-slate-950 rounded-xl border border-slate-800 space-y-1.5">
-            <div class="font-bold text-emerald-400 mb-1 truncate">${config.p1Name} (${errors.P1?.totalUE || 0} UEs)</div>
+            <div class="mb-2 pb-1.5 border-b border-slate-900 flex flex-wrap items-center justify-between gap-1">
+              <span class="font-bold text-emerald-400 text-xs break-words leading-tight">${config.p1Name}</span>
+              <span class="text-[10px] font-mono text-rose-400 font-bold shrink-0 bg-rose-950/60 px-1.5 py-0.5 rounded border border-rose-900/60">${errors.P1?.totalUE || 0} UEs</span>
+            </div>
             <div class="flex justify-between text-[11px]"><span>🕸️ Net Misses:</span> <strong>${errors.P1?.net || 0}</strong></div>
             <div class="flex justify-between text-[11px]"><span>⬅️ Wide Left:</span> <strong>${errors.P1?.wide_left || 0}</strong></div>
             <div class="flex justify-between text-[11px]"><span>➡️ Wide Right:</span> <strong>${errors.P1?.wide_right || 0}</strong></div>
@@ -835,7 +838,10 @@ export class AnalyticsViewComponent {
 
           <!-- P2 Pressure Errors -->
           <div class="p-2.5 bg-slate-950 rounded-xl border border-slate-800 space-y-1.5">
-            <div class="font-bold text-indigo-400 mb-1 truncate">${config.p2Name} (${errors.P2?.totalUE || 0} UEs)</div>
+            <div class="mb-2 pb-1.5 border-b border-slate-900 flex flex-wrap items-center justify-between gap-1">
+              <span class="font-bold text-indigo-400 text-xs break-words leading-tight">${config.p2Name}</span>
+              <span class="text-[10px] font-mono text-rose-400 font-bold shrink-0 bg-rose-950/60 px-1.5 py-0.5 rounded border border-rose-900/60">${errors.P2?.totalUE || 0} UEs</span>
+            </div>
             <div class="flex justify-between text-[11px]"><span>🕸️ Net Misses:</span> <strong>${errors.P2?.net || 0}</strong></div>
             <div class="flex justify-between text-[11px]"><span>⬅️ Wide Left:</span> <strong>${errors.P2?.wide_left || 0}</strong></div>
             <div class="flex justify-between text-[11px]"><span>➡️ Wide Right:</span> <strong>${errors.P2?.wide_right || 0}</strong></div>
@@ -875,7 +881,10 @@ export class AnalyticsViewComponent {
         <div class="grid grid-cols-2 gap-2">
           <!-- Player 1 Misses -->
           <div class="p-2.5 bg-slate-950 rounded-xl border border-slate-800 text-xs space-y-1.5">
-            <div class="font-bold text-emerald-400 mb-1 truncate">${config.p1Name} (${p1.unforcedErrorsTotal || 0} UEs)</div>
+            <div class="mb-2 pb-1.5 border-b border-slate-900 flex flex-wrap items-center justify-between gap-1">
+              <span class="font-bold text-emerald-400 text-xs break-words leading-tight">${config.p1Name}</span>
+              <span class="text-[10px] font-mono text-rose-400 font-bold shrink-0 bg-rose-950/60 px-1.5 py-0.5 rounded border border-rose-900/60">${p1.unforcedErrorsTotal || 0} UEs</span>
+            </div>
             <div class="flex justify-between"><span>🕸️ Net:</span> <strong class="text-slate-200">${p1Loc.net || 0} (${p1.unforcedErrorsTotal > 0 ? Math.round(((p1Loc.net || 0) / p1.unforcedErrorsTotal) * 100) : 0}%)</strong></div>
             <div class="flex justify-between"><span>⬅️ Wide Left:</span> <strong class="text-slate-200">${p1Loc.wide_left || 0} (${p1.unforcedErrorsTotal > 0 ? Math.round(((p1Loc.wide_left || 0) / p1.unforcedErrorsTotal) * 100) : 0}%)</strong></div>
             <div class="flex justify-between"><span>➡️ Wide Right:</span> <strong class="text-slate-200">${p1Loc.wide_right || 0} (${p1.unforcedErrorsTotal > 0 ? Math.round(((p1Loc.wide_right || 0) / p1.unforcedErrorsTotal) * 100) : 0}%)</strong></div>
@@ -884,7 +893,10 @@ export class AnalyticsViewComponent {
 
           <!-- Player 2 Misses -->
           <div class="p-2.5 bg-slate-950 rounded-xl border border-slate-800 text-xs space-y-1.5">
-            <div class="font-bold text-indigo-400 mb-1 truncate">${config.p2Name} (${p2.unforcedErrorsTotal || 0} UEs)</div>
+            <div class="mb-2 pb-1.5 border-b border-slate-900 flex flex-wrap items-center justify-between gap-1">
+              <span class="font-bold text-indigo-400 text-xs break-words leading-tight">${config.p2Name}</span>
+              <span class="text-[10px] font-mono text-rose-400 font-bold shrink-0 bg-rose-950/60 px-1.5 py-0.5 rounded border border-rose-900/60">${p2.unforcedErrorsTotal || 0} UEs</span>
+            </div>
             <div class="flex justify-between"><span>🕸️ Net:</span> <strong class="text-slate-200">${p2Loc.net || 0} (${p2.unforcedErrorsTotal > 0 ? Math.round(((p2Loc.net || 0) / p2.unforcedErrorsTotal) * 100) : 0}%)</strong></div>
             <div class="flex justify-between"><span>⬅️ Wide Left:</span> <strong class="text-slate-200">${p2Loc.wide_left || 0} (${p2.unforcedErrorsTotal > 0 ? Math.round(((p2Loc.wide_left || 0) / p2.unforcedErrorsTotal) * 100) : 0}%)</strong></div>
             <div class="flex justify-between"><span>➡️ Wide Right:</span> <strong class="text-slate-200">${p2Loc.wide_right || 0} (${p2.unforcedErrorsTotal > 0 ? Math.round(((p2Loc.wide_right || 0) / p2.unforcedErrorsTotal) * 100) : 0}%)</strong></div>
@@ -903,7 +915,7 @@ export class AnalyticsViewComponent {
         <div class="grid grid-cols-2 gap-2">
           <!-- Player 1 Causes -->
           <div class="p-2.5 bg-slate-950 rounded-xl border border-slate-800 text-xs space-y-1.5">
-            <div class="font-bold text-emerald-400 mb-1 truncate">${config.p1Name}</div>
+            <div class="font-bold text-emerald-400 mb-1.5 pb-1 border-b border-slate-900 text-xs break-words leading-tight">${config.p1Name}</div>
             <div class="flex justify-between"><span>Spacing:</span> <strong class="text-slate-200">${p1Cause.spacing || 0}</strong></div>
             <div class="flex justify-between"><span>Let ball:</span> <strong class="text-slate-200">${p1Cause.let_ball || 0}</strong></div>
             <div class="flex justify-between"><span>Above Shoulder:</span> <strong class="text-slate-200">${p1Cause.above_shoulder || 0}</strong></div>
@@ -912,7 +924,7 @@ export class AnalyticsViewComponent {
 
           <!-- Player 2 Causes -->
           <div class="p-2.5 bg-slate-950 rounded-xl border border-slate-800 text-xs space-y-1.5">
-            <div class="font-bold text-indigo-400 mb-1 truncate">${config.p2Name}</div>
+            <div class="font-bold text-indigo-400 mb-1.5 pb-1 border-b border-slate-900 text-xs break-words leading-tight">${config.p2Name}</div>
             <div class="flex justify-between"><span>Spacing:</span> <strong class="text-slate-200">${p2Cause.spacing || 0}</strong></div>
             <div class="flex justify-between"><span>Let ball:</span> <strong class="text-slate-200">${p2Cause.let_ball || 0}</strong></div>
             <div class="flex justify-between"><span>Above Shoulder:</span> <strong class="text-slate-200">${p2Cause.above_shoulder || 0}</strong></div>
@@ -941,9 +953,9 @@ export class AnalyticsViewComponent {
                 <span class="text-slate-400">${r.total} points (${stats.totalPoints > 0 ? Math.round((r.total / stats.totalPoints) * 100) : 0}%)</span>
               </div>
 
-              <div class="flex items-center justify-between text-[11px] font-mono">
-                <span class="text-emerald-400 font-bold">${config.p1Name}: ${r.p1Won} (${p1Pct}%)</span>
-                <span class="text-indigo-400 font-bold">${config.p2Name}: ${r.p2Won} (${p2Pct}%)</span>
+              <div class="flex flex-wrap items-center justify-between gap-1 text-[11px] font-mono">
+                <span class="text-emerald-400 font-bold break-words">${config.p1Name}: ${r.p1Won} (${p1Pct}%)</span>
+                <span class="text-indigo-400 font-bold break-words">${config.p2Name}: ${r.p2Won} (${p2Pct}%)</span>
               </div>
 
               <div class="h-2 rounded-full bg-slate-800 overflow-hidden flex">
@@ -969,7 +981,7 @@ export class AnalyticsViewComponent {
         <div class="grid grid-cols-2 gap-2">
           <!-- Player 1 Shots -->
           <div class="p-2 bg-slate-950 rounded-xl border border-slate-800 text-xs space-y-1">
-            <div class="font-bold text-emerald-400 mb-1 truncate">${config.p1Name}</div>
+            <div class="font-bold text-emerald-400 mb-1.5 pb-1 border-b border-slate-900 text-xs break-words leading-tight">${config.p1Name}</div>
             <div class="flex justify-between"><span>Forehand:</span> <strong class="text-slate-200">${p1.winnersByShot.forehand} W / ${p1.unforcedErrorsByShot.forehand} UE</strong></div>
             <div class="flex justify-between"><span>Backhand:</span> <strong class="text-slate-200">${p1.winnersByShot.backhand} W / ${p1.unforcedErrorsByShot.backhand} UE</strong></div>
             <div class="flex justify-between"><span>Volley/OH:</span> <strong class="text-slate-200">${p1.winnersByShot.volley + p1.winnersByShot.overhead} W / ${p1.unforcedErrorsByShot.volley + p1.unforcedErrorsByShot.overhead} UE</strong></div>
@@ -978,7 +990,7 @@ export class AnalyticsViewComponent {
 
           <!-- Player 2 Shots -->
           <div class="p-2 bg-slate-950 rounded-xl border border-slate-800 text-xs space-y-1">
-            <div class="font-bold text-indigo-400 mb-1 truncate">${config.p2Name}</div>
+            <div class="font-bold text-indigo-400 mb-1.5 pb-1 border-b border-slate-900 text-xs break-words leading-tight">${config.p2Name}</div>
             <div class="flex justify-between"><span>Forehand:</span> <strong class="text-slate-200">${p2.winnersByShot.forehand} W / ${p2.unforcedErrorsByShot.forehand} UE</strong></div>
             <div class="flex justify-between"><span>Backhand:</span> <strong class="text-slate-200">${p2.winnersByShot.backhand} W / ${p2.unforcedErrorsByShot.backhand} UE</strong></div>
             <div class="flex justify-between"><span>Volley/OH:</span> <strong class="text-slate-200">${p2.winnersByShot.volley + p2.winnersByShot.overhead} W / ${p2.unforcedErrorsByShot.volley + p2.unforcedErrorsByShot.overhead} UE</strong></div>
@@ -1601,7 +1613,7 @@ export class AnalyticsViewComponent {
                     Momentum: ${Number(val) > 0 ? '+' : ''}${val}
                   </div>
                 </div>
-                <div class="flex items-center gap-3 text-[10px] text-slate-300 pt-0.5 border-t border-slate-900">
+                <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-slate-300 pt-0.5 border-t border-slate-900">
                   <span>🎾 Server: <strong class="text-white">${srv}</strong></span>
                   <span>Score: <strong class="text-emerald-400">${this.engine.config.p1Name} ${p1Pts}</strong> - <strong class="text-indigo-400">${this.engine.config.p2Name} ${p2Pts}</strong></span>
                   <span>Drivers: ${this.engine.config.p1Name} (${p1W}W / ${p1UE}UE) vs ${this.engine.config.p2Name} (${p2W}W / ${p2UE}UE)</span>
